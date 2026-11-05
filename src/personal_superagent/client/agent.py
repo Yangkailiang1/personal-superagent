@@ -19,7 +19,7 @@ def request(config, endpoint, data):
         headers["Authorization"] = "Bearer " + config["token"]
     req = Request(
         config["url"] + "/api/device/" + endpoint + "/",
-        json.dumps(data).encode(),
+        json.dumps(data, ensure_ascii=False).encode(),
         headers,
     )
     with urlopen(req, timeout=15) as response:

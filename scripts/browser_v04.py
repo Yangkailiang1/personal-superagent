@@ -62,7 +62,7 @@ with tempfile.TemporaryDirectory() as folder, sync_playwright() as p:
     for _ in range(16):
         worker()
         page.wait_for_timeout(1600)
-        data=page.request.get(origin+"/api/task/?id="+task_id).json()
+        data=page.request.get(origin+"/api/task/?id="+task_id,max_retries=3).json()
         state=data["state"]
         if state=="queued": continue
         if state=="waiting_device":
