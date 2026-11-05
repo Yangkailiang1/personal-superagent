@@ -136,3 +136,15 @@ class WorkflowTests(TransactionTestCase):
         Task.objects.filter(pk=attempt.task_id).update(status="interrupted")
         with self.assertRaises(StateConflict):
             resume(user=self.user, task_id=attempt.task_id, attempt_id=attempt.pk)
+
+    def test_empty_snapshot_cannot_be_reported_as_success(self):
+        self.queued()
+        attempt = claim_next(uuid.uuid4())
+        from .lifecycle import complete
+        complete(attempt.pk, attempt.claim_token, state="succeeded", snapshot={
+            "checkpoint_id": "empty-final", "complete": False, "pending": [], "plan": [],
+            "documents": {}, "subtasks": [], "result": "",
+        })
+        attempt.refresh_from_db()
+        self.assertEqual(attempt.state, "failed")
+        self.assertIn("不能标记成功", attempt.error)

@@ -127,5 +127,7 @@ def complete(attempt_id, token, *, state: str, result: str = "", error: str = ""
             state, result, error = "waiting_approval", "", ""
         elif snapshot.get("complete"):
             state, result, error = "succeeded", snapshot["result"], ""
+        else:
+            state, result, error = "failed", "", "执行未返回最终回答或有效审批，不能标记成功。"
     finish_locked(attempt, state, result=result, error=error)
     return True
