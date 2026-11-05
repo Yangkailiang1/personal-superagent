@@ -62,4 +62,4 @@ flowchart TD
 
 采用 [assistant-ui/assistant-ui](https://github.com/assistant-ui/assistant-ui)（MIT）的真实 ExternalStoreRuntime、Thread、Message 和 Composer，不使用 assistant-cloud。Django 仍持有状态，模型密钥不进入浏览器。黑白灰布局包含工作台、队列、过程/审批/产物和设备页；无虚构百分比。
 
-`/app/` 为新入口，旧简易界面和接口保留。V0.3 的 Python 图源码冻结在 workflow_v03，按执行版本选择，保留旧审批恢复能力；已核对冻结源码与原部署提交 aa75c6e 字节一致。不迁移或清空数据库。
+`/` 自动进入新版 `/app/`，旧任务详情书签跳到新版对应任务；旧列表与详情页面已移除，操作与下载接口保留。V0.3 的 Python 图源码冻结在 workflow_v03，按执行版本选择，保留旧审批恢复能力；已核对冻结源码与原部署提交 aa75c6e 字节一致。不迁移或清空数据库。

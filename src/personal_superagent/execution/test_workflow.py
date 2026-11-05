@@ -75,7 +75,7 @@ class WorkflowTests(TransactionTestCase):
         download = self.client.get(reverse("artifact", args=[attempt.task_id, attempt.pk, item.pk]), {"download": 1})
         self.assertEqual(download.status_code, 200)
         self.assertIn(b"# ", b"".join(download.streaming_content))
-        self.assertContains(self.client.get(reverse("task_detail", args=[attempt.task_id])), "最终回答")
+        self.assertEqual(self.client.get("/api/task/", {"id": str(attempt.task_id)}).json()["attempt"]["result"], attempt.result)
 
     def test_reject_does_not_publish_document(self):
         attempt = self.queued(); self.worker()

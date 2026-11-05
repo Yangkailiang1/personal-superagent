@@ -1,5 +1,0 @@
-{% extends 'tasks/base.html' %}
-{% block content %}<h1>我的任务</h1>
-<ul>{% for task in tasks %}<li><a href="{% url 'task_detail' task.id %}">{{ task.title }}</a> · {{ task.get_status_display }}</li>{% empty %}<li>暂无任务</li>{% endfor %}</ul>
-<h2>新建任务</h2><form method="post">{% csrf_token %}{{ form.as_p }}<button>保存任务</button></form>
-{% endblock %}

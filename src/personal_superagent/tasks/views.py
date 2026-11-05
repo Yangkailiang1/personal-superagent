@@ -1,37 +1,21 @@
+"""旧书签只做导航兼容，任务操作统一进入新版工作台。"""
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import redirect, render
-from django.views.decorators.http import require_GET, require_http_methods
-from uuid import uuid4
-from django.conf import settings
+from django.shortcuts import redirect
+from django.urls import reverse
+from django.views.decorators.http import require_GET
 
-from .forms import TaskForm
-from .services import create_task, get_task, list_tasks
+from .services import get_task
 
 
 @login_required
-@require_http_methods(["GET", "POST"])
+@require_GET
 def task_list(request):
-    form = TaskForm(request.POST if request.method == "POST" else None)
-    if request.method == "POST" and form.is_valid():
-        task = create_task(user=request.user, form=form)
-        return redirect("task_detail", task_id=task.id)
-    return render(request, "tasks/list.html", {
-        "form": form, "tasks": list_tasks(user=request.user),
-    })
+    return redirect("dashboard")
 
 
 @login_required
 @require_GET
 def task_detail(request, task_id):
+    # 先校验归属，旧链接也不能借重定向探查其他用户任务。
     task = get_task(user=request.user, task_id=task_id)
-    attempts = list(task.attempts.order_by("-created_at"))
-    active = next((a for a in attempts if a.state in {"queued", "running", "waiting_approval", "waiting_device"}), None)
-    unsafe = any(not a.process_stopped for a in attempts)
-    return render(request, "tasks/detail.html", {
-        "task": task, "attempts": attempts, "latest": attempts[0] if attempts else None,
-        "active": active, "unsafe": unsafe, "request_key": uuid4(),
-        "can_start": task.status == "pending",
-        "can_retry": task.status in {"failed", "cancelled", "interrupted"} and not unsafe,
-        "can_resume": task.status == "interrupted" and not unsafe and bool(attempts and attempts[0].workflow_version),
-        "real_enabled": settings.ALLOW_REAL_MODE,
-    })
+    return redirect(f"{reverse('dashboard')}?task={task.pk}")

@@ -10,7 +10,7 @@ uv sync --locked --group deploy
 uv run --locked --group deploy python scripts/deploy/remote.py tunnel
 ```
 
-保持终端运行，打开 **http://127.0.0.1:18002/app/**。新安装账号仍用 `scripts/deploy/create_account.py`，不会留下默认密码。旧简易入口 `/` 保留。
+保持终端运行，打开 **http://127.0.0.1:18002/app/**。新安装账号仍用 `scripts/deploy/create_account.py`，不会留下默认密码。默认首页 `/` 自动进入新版 `/app/`，旧任务书签跳到新版对应任务。
 
 ## 在自己的电脑绑定
 

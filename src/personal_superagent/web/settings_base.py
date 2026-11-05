@@ -85,7 +85,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # 认证相关 URL 配置。
 LOGIN_URL = "/accounts/login/"           # 未登录用户访问受限页面时重定向到此
-LOGIN_REDIRECT_URL = "/"                 # 登录成功后默认跳转首页
+LOGIN_REDIRECT_URL = "/app/"                 # 登录成功后默认跳转首页
 LOGOUT_REDIRECT_URL = "/accounts/login/" # 登出后跳转回登录页
 
 # 会话 Cookie 安全策略。
