@@ -4,6 +4,7 @@ from uuid import UUID
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
+from django.views.decorators.cache import never_cache
 
 from .auth import authenticate, pair
 from .models import LocalOperation
@@ -11,6 +12,7 @@ from .protocol import poll, report, validate_lease
 
 
 @csrf_exempt
+@never_cache
 @require_POST
 def endpoint(request, action):
     """仅设备 Bearer 身份，不接受浏览器 Session；不为 Cookie 接口关闭 CSRF。"""
@@ -33,6 +35,8 @@ def endpoint(request, action):
         device = authenticate(request)
         if device is None:
             return JsonResponse({"error": "设备凭证无效或已撤销"}, status=401)
+        if not isinstance(data.get("session"), str):
+            raise ValueError("会话结构不合法")
         if action in {"connect", "poll"}:
             result = poll(
                 device.pk,
@@ -43,6 +47,11 @@ def endpoint(request, action):
             return JsonResponse(result)
         if UUID(data["session"]) != device.session:
             raise ValueError("设备会话已失效")
+        if not isinstance(data.get("id"), str) or not isinstance(
+            data.get("lease"), str
+        ):
+            raise ValueError("操作结构不合法")
+        UUID(data["id"])
         if action == "check":
             validate_lease(device, data["id"], data["lease"])
         elif action == "report":

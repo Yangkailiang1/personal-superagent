@@ -21,6 +21,8 @@ def sync_grants(device, manifest):
         raise ValueError("最多授权 16 个目录")
     ids = []
     for item in manifest:
+        if not isinstance(item, dict) or not isinstance(item.get("id"), str):
+            raise ValueError("授权结构不合法")
         grant_id = uuid.UUID(item["id"])
         label, tools = item.get("label", ""), item.get("tools", [])
         if (

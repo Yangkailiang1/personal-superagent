@@ -13,6 +13,7 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
+from django.views.decorators.cache import never_cache
 from django.db import transaction
 
 from personal_superagent.tasks.forms import TaskForm
@@ -107,6 +108,7 @@ def task_data(task):
 
 @login_required
 @ensure_csrf_cookie
+@never_cache
 @require_http_methods(["GET", "POST"])
 def api(request, action):
     try:
