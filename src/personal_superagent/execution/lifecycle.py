@@ -10,7 +10,7 @@ from personal_superagent.tasks.models import Task
 from personal_superagent.tasks.services import get_task
 from .models import Attempt, RunEvent
 
-ACTIVE = {"queued", "running", "waiting_approval"}
+ACTIVE = {"queued", "running", "waiting_approval", "waiting_device"}
 TERMINAL = {"succeeded", "failed", "cancelled", "interrupted"}
 
 
@@ -47,9 +47,10 @@ def enqueue(*, user, task_id, request_key: UUID, mode: str, retry: bool = False)
         raise StateConflict("任务已经启动，请使用重试入口。")
     from personal_superagent.workflow import VERSION
     from personal_superagent.workflow.checkpoints import execution_config
+    from personal_superagent.devices.workflow import scope_for
     attempt = Attempt.objects.create(
         task=task, request_key=request_key, mode=mode,
-        input_snapshot={"title": task.title, "description": task.description, "workflow": execution_config(mode)},
+        input_snapshot={"title": task.title, "description": task.description, "workflow": execution_config(mode), "device": scope_for(task)},
         workflow_version=VERSION,
         activity="等待 Worker 领取",
     )
@@ -68,8 +69,10 @@ def request_cancel(*, user, task_id, attempt_id) -> Attempt:
         return attempt
     attempt.cancel_requested_at = timezone.now()
     attempt.save(update_fields=["cancel_requested_at"])
-    if attempt.state in {"queued", "waiting_approval"}:
+    if attempt.state in {"queued", "waiting_approval", "waiting_device"}:
         attempt.approvals.filter(decision="pending").update(decision="cancelled", version=models.F("version") + 1)
+        attempt.local_operations.filter(state="pending").update(state="failed", reason="任务已取消，操作未开始", result={"error": "任务已取消"})
+        attempt.local_operations.filter(state="leased").update(state="uncertain", reason="任务已取消；已开始的操作可能生效，回执待核实")
         finish_locked(attempt, "cancelled", error="用户取消排队任务")
     else:
         append_event(attempt, "cancel_requested", {})
@@ -80,7 +83,7 @@ def finish_locked(attempt: Attempt, state: str, *, result: str = "", error: str 
     """调用方持有 Task/Attempt 锁；只在确认子进程停止后完成执行。"""
     attempt.state, attempt.result, attempt.error = state, result, error
     attempt.activity = dict(Task.Status.choices)[state]
-    attempt.finished_at = None if state == "waiting_approval" else timezone.now()
+    attempt.finished_at = None if state in {"waiting_approval", "waiting_device"} else timezone.now()
     attempt.save(update_fields=["state", "result", "error", "activity", "finished_at"])
     Task.objects.filter(pk=attempt.task_id).update(status=state)
     append_event(attempt, "finished", {"state": state, "error": error})
@@ -125,9 +128,13 @@ def complete(attempt_id, token, *, state: str, result: str = "", error: str = ""
         apply_snapshot_locked(attempt, snapshot)
         if snapshot.get("pending"):
             state, result, error = "waiting_approval", "", ""
+        elif snapshot.get("local_requests"):
+            state, result, error = "waiting_device", "", ""
         elif snapshot.get("complete"):
             state, result, error = "succeeded", snapshot["result"], ""
         else:
             state, result, error = "failed", "", "执行未返回最终回答或有效审批，不能标记成功。"
     finish_locked(attempt, state, result=result, error=error)
+    from personal_superagent.devices.workflow import maybe_resume_locked
+    maybe_resume_locked(attempt)
     return True

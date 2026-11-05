@@ -25,8 +25,8 @@ def main() -> None:
     threading.Thread(target=watch_parent, daemon=True).start()
     try:
         if payload.get("workflow_version"):
-            from personal_superagent.workflow.checkpoints import run_workflow
-            data = run_workflow(payload, emit)
+            from personal_superagent.workflow.versions import module_for
+            data = module_for(payload["workflow_version"]).run_workflow(payload, emit)
             emit("snapshot", data)
         else:
             from .agent import run_agent

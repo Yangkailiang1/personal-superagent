@@ -101,6 +101,8 @@ def spawn(attempt: Attempt) -> Running | None:
         for approval in attempt.approvals.filter(checkpoint_id=attempt.checkpoint_id).order_by("interrupt_id", "action_index"):
             if approval.decision in {"approve", "reject"}:
                 decisions.setdefault(approval.interrupt_id, {"decisions": []})["decisions"].append({"type": approval.decision})
+        for operation in attempt.local_operations.filter(checkpoint_id=attempt.checkpoint_id, state__in=["succeeded", "failed"]):
+            decisions[operation.interrupt_id] = {"state": operation.state, "result": operation.result}
         payload = {
             "snapshot": attempt.input_snapshot, "mode": attempt.mode, "workflow_version": attempt.workflow_version,
             "attempt_id": str(attempt.pk), "action": attempt.execution_action,
@@ -146,6 +148,7 @@ def run_worker(*, concurrency: int, timeout: int, once: bool = False, max_jobs: 
     running: list[Running] = []
     stopping = False
     completed = 0
+    last_sweep = 0.0
 
     def stop(signum, frame):
         nonlocal stopping
@@ -157,6 +160,10 @@ def run_worker(*, concurrency: int, timeout: int, once: bool = False, max_jobs: 
             close_old_connections()
             expire_leases()
             reconcile_interrupted()
+            if time.monotonic() - last_sweep > 5:
+                from personal_superagent.devices.protocol import sweep
+                sweep()
+                last_sweep = time.monotonic()
             for item in list(running):
                 consume(item)
                 current = Attempt.objects.get(pk=item.attempt.pk)

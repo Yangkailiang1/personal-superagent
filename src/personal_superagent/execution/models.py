@@ -40,7 +40,7 @@ class Attempt(models.Model):
             models.UniqueConstraint(fields=["task", "request_key"], name="attempt_request_once"),
             # 中断但没有确认进程停止，仍占据执行归属，阻止重试。
             models.UniqueConstraint(fields=["task"], condition=(
-                Q(state__in=["queued", "running", "waiting_approval"]) | Q(process_stopped=False)
+                Q(state__in=["queued", "running", "waiting_approval", "waiting_device"]) | Q(process_stopped=False)
             ), name="one_active_attempt_per_task"),
         ]
 

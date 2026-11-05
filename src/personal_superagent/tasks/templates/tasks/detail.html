@@ -18,7 +18,8 @@
 <h2>计划</h2><ul id="plan">{% for todo in latest.plan %}<li>{{ todo.content }} · {{ todo.status }}</li>{% empty %}<li>尚未制定计划</li>{% endfor %}</ul>
 <h2>子 Agent</h2><ul id="subtasks">{% for subtask in latest.subtasks.all %}<li>{{ subtask.role }} · {{ subtask.state }}<details><summary>任务与结果</summary><pre>{{ subtask.description }}</pre><article>{{ subtask.result|markdown }}</article></details></li>{% empty %}<li>暂无委派</li>{% endfor %}</ul>
 {% for approval in latest.approvals.all %}
-{% if approval.decision == 'pending' %}<section class="approval"><h2>确认交付文档</h2><p>{{ approval.action.args.name }}</p>
+{% if approval.decision == 'pending' %}<section class="approval"><h2>{% if approval.action.name == 'local_write_text' %}确认本地写入{% else %}确认交付文档{% endif %}</h2><p>{{ approval.action.args.name }}{{ approval.action.args.path }}</p>
+{% if approval.action.name == 'local_write_text' %}<p>授权目录：{{ latest.input_snapshot.device.label }} · 仅新建文件，不覆盖</p>{% endif %}
 <article>{{ approval.action.args.content|markdown }}</article>
 <form method="post" action="{% url 'approval_decide' task.id latest.id approval.id %}">{% csrf_token %}
 <input type="hidden" name="version" value="{{ approval.version }}"><input type="hidden" name="request_key" value="{{ request_key }}">
@@ -41,7 +42,7 @@
   const initialState = "{{ latest.state }}";
   const wasUnconfirmed = {{ unsafe|yesno:"true,false" }};
   const url = "{% url 'attempt_events' task.id latest.id %}";
-  const labels = {queued:"排队中",running:"运行中",waiting_approval:"待审批",succeeded:"成功",failed:"失败",cancelled:"已取消",interrupted:"中断"};
+  const labels = {queued:"排队中",running:"运行中",waiting_approval:"待审批",waiting_device:"等待设备",succeeded:"成功",failed:"失败",cancelled:"已取消",interrupted:"中断"};
   async function refresh() {
     try {
       const response = await fetch(`${url}?after=${cursor}`, {cache:"no-store"});
@@ -64,7 +65,7 @@
       }
       cursor = data.cursor;
       if (data.has_more) { setTimeout(refresh, 0); return; }
-      const active = ["queued", "running"].includes(data.state);
+      const active = ["queued", "running", "waiting_device"].includes(data.state);
       if (data.state === "waiting_approval" && initialState !== "waiting_approval") { location.reload(); return; }
       if (wasActive && !active) { location.reload(); return; }
       if (wasUnconfirmed && !active && data.process_stopped) { location.reload(); return; }

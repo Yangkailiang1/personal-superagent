@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",       # 会话管理，支持登录状态保持
     "personal_superagent.tasks",     # 本项目核心任务模块
     "personal_superagent.execution",
+    "personal_superagent.devices",
 ]
 
 # 中间件栈，按请求处理顺序排列。
@@ -91,3 +92,6 @@ LOGOUT_REDIRECT_URL = "/accounts/login/" # 登出后跳转回登录页
 SESSION_COOKIE_SECURE = True   # 仅通过 HTTPS 传输会话 Cookie，防止中间人窃取
 CSRF_COOKIE_SECURE = True      # 仅通过 HTTPS 传输 CSRF Token，防止跨站请求伪造
 ALLOW_REAL_MODE = os.environ.get("ALLOW_REAL_MODE", "1") == "1"
+# 供 Django 框架/LiveServer 识别；SPA 构建资源独立通过 /app/assets/ 提供。
+STATIC_URL = "/static/"
+MEDIA_URL = "/media/"

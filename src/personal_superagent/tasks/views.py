@@ -25,7 +25,7 @@ def task_list(request):
 def task_detail(request, task_id):
     task = get_task(user=request.user, task_id=task_id)
     attempts = list(task.attempts.order_by("-created_at"))
-    active = next((a for a in attempts if a.state in {"queued", "running", "waiting_approval"}), None)
+    active = next((a for a in attempts if a.state in {"queued", "running", "waiting_approval", "waiting_device"}), None)
     unsafe = any(not a.process_stopped for a in attempts)
     return render(request, "tasks/detail.html", {
         "task": task, "attempts": attempts, "latest": attempts[0] if attempts else None,

@@ -148,3 +148,15 @@ class WorkflowTests(TransactionTestCase):
         attempt.refresh_from_db()
         self.assertEqual(attempt.state, "failed")
         self.assertIn("不能标记成功", attempt.error)
+
+    def test_v03_waiting_checkpoint_remains_executable(self):
+        from personal_superagent.workflow_v03.checkpoints import execution_config
+        attempt = self.queued()
+        attempt.workflow_version = "0.3.0"
+        attempt.input_snapshot["workflow"] = execution_config("demo")
+        attempt.save(update_fields=["workflow_version", "input_snapshot"])
+        self.worker(); attempt.refresh_from_db()
+        self.assertEqual(attempt.state, "waiting_approval", attempt.error)
+        self.decision(attempt); self.worker(); attempt.refresh_from_db()
+        self.assertEqual(attempt.state, "succeeded", attempt.error)
+        self.assertEqual(attempt.artifacts.count(), 1)

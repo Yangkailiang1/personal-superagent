@@ -7,7 +7,7 @@ from django.utils import timezone
 
 from personal_superagent.tasks.models import Task
 from personal_superagent.tasks.services import get_task
-from personal_superagent.workflow.checkpoints import CheckpointError, inspect_checkpoint
+from personal_superagent.workflow.checkpoints import CheckpointError
 from .lifecycle import StateConflict, append_event
 from .models import Approval, Attempt
 from .projections import apply_snapshot_locked
@@ -38,7 +38,7 @@ def decide(*, user, task_id, attempt_id, approval_id, expected_version: int, req
         return approval
     if decision not in {"approve", "reject"}:
         raise StateConflict("只允许批准或拒绝")
-    if attempt.state != "waiting_approval" or not attempt.process_stopped or attempt.cancel_requested_at:
+    if attempt.state not in {"waiting_approval", "waiting_device"} or not attempt.process_stopped or attempt.cancel_requested_at:
         raise StateConflict("该执行当前不能审批")
     if approval.version != expected_version or approval.decision != "pending":
         raise StateConflict("审批已更新，请刷新页面")
@@ -46,8 +46,8 @@ def decide(*, user, task_id, attempt_id, approval_id, expected_version: int, req
     approval.version += 1
     approval.save(update_fields=["decision", "request_key", "decided_at", "version"])
     append_event(attempt, "approval_decided", {"approval_id": approval.pk, "decision": decision})
-    if not attempt.approvals.filter(checkpoint_id=attempt.checkpoint_id, decision="pending").exists():
-        queue_locked(attempt, "resume")
+    from personal_superagent.devices.workflow import maybe_resume_locked
+    maybe_resume_locked(attempt)
     return approval
 
 
@@ -61,7 +61,8 @@ def resume(*, user, task_id, attempt_id):
     if attempt.hostname != socket.gethostname():
         raise StateConflict("checkpoint 只能在原执行主机恢复")
     try:
-        data = inspect_checkpoint(attempt)
+        from personal_superagent.workflow.versions import module_for
+        data = module_for(attempt.workflow_version).inspect_checkpoint(attempt)
     except (CheckpointError, ValueError) as exc:
         raise StateConflict(str(exc)) from None
     apply_snapshot_locked(attempt, data)
@@ -70,6 +71,12 @@ def resume(*, user, task_id, attempt_id):
         attempt.save(update_fields=["state", "activity"])
         Task.objects.filter(pk=task_id).update(status="waiting_approval")
         append_event(attempt, "approval_recovered", {})
+    elif data.get("local_requests"):
+        attempt.state = "waiting_device"
+        attempt.save(update_fields=["state"])
+        Task.objects.filter(pk=task_id).update(status="waiting_device")
+        from personal_superagent.devices.workflow import maybe_resume_locked
+        maybe_resume_locked(attempt)
     else:
         queue_locked(attempt, "resume" if data["pending"] else "continue")
     return attempt

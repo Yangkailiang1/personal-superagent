@@ -28,6 +28,8 @@ def apply_snapshot_locked(attempt, data: dict) -> None:
         SubTask.objects.update_or_create(attempt=attempt, call_id=item["call_id"], defaults={
             key: item[key] for key in ["role", "description", "state", "result"]
         })
+    from personal_superagent.devices.workflow import sync_requests_locked
+    sync_requests_locked(attempt, data)
 
 
 def update_activity_locked(attempt, kind: str, data: dict) -> None:

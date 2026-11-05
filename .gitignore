@@ -14,3 +14,4 @@ dist/
 .server.*
 .runtime/
 .ruff_cache/
+node_modules/

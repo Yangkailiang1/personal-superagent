@@ -3,14 +3,22 @@ import hashlib
 import shlex
 import subprocess
 import tempfile
+import tarfile
 from pathlib import Path
 
 from remote import ROOT, connect, run
 
 revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
+if subprocess.check_output(["git", "status", "--porcelain", "--", "frontend"], cwd=ROOT).strip():
+    raise SystemExit("前端存在未提交修改，拒绝把它混入已提交版本发布")
+# 在开发电脑构建，云服务器不用安装 Node。只将静态产物附加到已提交源码归档。
+subprocess.run(["npm", "ci", "--prefix", str(ROOT / "frontend")], check=True, stdout=subprocess.DEVNULL)
+subprocess.run(["npm", "run", "build", "--prefix", str(ROOT / "frontend")], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 with tempfile.TemporaryDirectory() as temporary:
     archive = Path(temporary) / "release.tar"
     subprocess.run(["git", "archive", "--format=tar", "-o", str(archive), revision], cwd=ROOT, check=True)
+    with tarfile.open(archive,"a") as package:
+        package.add(ROOT / "frontend" / "dist", arcname="frontend/dist")
     digest = hashlib.sha256(archive.read_bytes()).hexdigest()
     remote_archive = f"/tmp/personal-superagent-{revision}.tar"
     with connect() as client:

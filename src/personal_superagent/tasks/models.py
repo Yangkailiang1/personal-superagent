@@ -26,6 +26,7 @@ class Task(models.Model):
         QUEUED = "queued", "排队中"
         RUNNING = "running", "运行中"
         WAITING_APPROVAL = "waiting_approval", "待审批"
+        WAITING_DEVICE = "waiting_device", "等待设备"
         SUCCEEDED = "succeeded", "成功"
         FAILED = "failed", "失败"
         CANCELLED = "cancelled", "已取消"
@@ -60,6 +61,8 @@ class Task(models.Model):
     # 之后任何 update 都不会改动它；与 auto_now（每次保存都刷新）相区别。
     # 因 settings.USE_TZ=True，存储的是带时区的 UTC 时间。
     created_at = models.DateTimeField(auto_now_add=True)
+    local_grant = models.ForeignKey("devices.Grant", null=True, blank=True, on_delete=models.SET_NULL)
+    local_file = models.CharField(max_length=200, default="input.md")
 
     class Meta:
         # 默认排序：按创建时间倒序（最新在前），时间相同时按 id 正序保证稳定分页。
