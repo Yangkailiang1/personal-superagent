@@ -107,7 +107,11 @@ class PostgresExecutionTests(TransactionTestCase):
 
     def queued(self, mode="demo"):
         task = Task.objects.create(owner=self.user, title="整理任务", description="请统计这段文字。")
-        return enqueue(user=self.user, task_id=task.pk, request_key=uuid.uuid4(), mode=mode)
+        attempt = enqueue(user=self.user, task_id=task.pk, request_key=uuid.uuid4(), mode=mode)
+        # 保留 V0.2 执行器回归；V0.3 审批执行链路在 test_workflow 独立验证。
+        attempt.workflow_version = ""
+        attempt.save(update_fields=["workflow_version"])
+        return attempt
 
     def command(self, *args, env=None):
         child_env = dict(os.environ, PGDATABASE=connection.settings_dict["NAME"])

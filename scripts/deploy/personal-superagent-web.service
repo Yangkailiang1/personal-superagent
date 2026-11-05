@@ -1,0 +1,21 @@
+[Unit]
+Description=Personal Superagent Web (SSH tunnel only)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+User=superagent
+Group=superagent
+WorkingDirectory=/opt/personal-superagent/current
+EnvironmentFile=/opt/personal-superagent/shared/runtime.env
+ExecStart=/opt/personal-superagent/current/.venv/bin/gunicorn personal_superagent.web.wsgi:application --bind 127.0.0.1:8000 --workers 1 --threads 2 --timeout 60 --access-logfile -
+Restart=on-failure
+RestartSec=5
+UMask=0077
+MemoryAccounting=yes
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=read-only
+
+[Install]
+WantedBy=multi-user.target

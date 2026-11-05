@@ -1,0 +1,22 @@
+[Unit]
+Description=Personal Superagent Worker
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+User=superagent
+Group=superagent
+WorkingDirectory=/opt/personal-superagent/current
+EnvironmentFile=/opt/personal-superagent/shared/runtime.env
+ExecStart=/opt/personal-superagent/current/.venv/bin/python manage.py agent_worker --concurrency 1 --timeout 1800
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+UMask=0077
+MemoryAccounting=yes
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=read-only
+
+[Install]
+WantedBy=multi-user.target

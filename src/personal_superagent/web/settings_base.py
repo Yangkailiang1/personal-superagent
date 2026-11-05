@@ -90,3 +90,4 @@ LOGOUT_REDIRECT_URL = "/accounts/login/" # 登出后跳转回登录页
 # 会话 Cookie 安全策略。
 SESSION_COOKIE_SECURE = True   # 仅通过 HTTPS 传输会话 Cookie，防止中间人窃取
 CSRF_COOKIE_SECURE = True      # 仅通过 HTTPS 传输 CSRF Token，防止跨站请求伪造
+ALLOW_REAL_MODE = os.environ.get("ALLOW_REAL_MODE", "1") == "1"

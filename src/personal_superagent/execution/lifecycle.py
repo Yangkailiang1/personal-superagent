@@ -2,7 +2,7 @@
 from uuid import UUID
 from datetime import timedelta
 
-from django.db import transaction
+from django.db import models, transaction
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
 
@@ -10,7 +10,7 @@ from personal_superagent.tasks.models import Task
 from personal_superagent.tasks.services import get_task
 from .models import Attempt, RunEvent
 
-ACTIVE = {"queued", "running"}
+ACTIVE = {"queued", "running", "waiting_approval"}
 TERMINAL = {"succeeded", "failed", "cancelled", "interrupted"}
 
 
@@ -36,15 +36,21 @@ def enqueue(*, user, task_id, request_key: UUID, mode: str, retry: bool = False)
         return existing
     if mode not in {"demo", "real"}:
         raise StateConflict("执行模式必须为 demo 或 real。")
+    from django.conf import settings
+    if mode == "real" and not settings.ALLOW_REAL_MODE:
+        raise StateConflict("此部署只启用离线演示，真实模型尚未开放。")
     if task.attempts.filter(process_stopped=False).exists() or task.attempts.filter(state__in=ACTIVE).exists():
         raise StateConflict("任务仍有活动执行，或旧进程尚未确认停止。")
     if retry and task.status not in {"failed", "cancelled", "interrupted"}:
         raise StateConflict("仅失败、取消或中断任务可以重试。")
     if not retry and task.status != "pending":
         raise StateConflict("任务已经启动，请使用重试入口。")
+    from personal_superagent.workflow import VERSION
+    from personal_superagent.workflow.checkpoints import execution_config
     attempt = Attempt.objects.create(
         task=task, request_key=request_key, mode=mode,
-        input_snapshot={"title": task.title, "description": task.description},
+        input_snapshot={"title": task.title, "description": task.description, "workflow": execution_config(mode)},
+        workflow_version=VERSION,
         activity="等待 Worker 领取",
     )
     task.status = "queued"
@@ -62,7 +68,8 @@ def request_cancel(*, user, task_id, attempt_id) -> Attempt:
         return attempt
     attempt.cancel_requested_at = timezone.now()
     attempt.save(update_fields=["cancel_requested_at"])
-    if attempt.state == "queued":
+    if attempt.state in {"queued", "waiting_approval"}:
+        attempt.approvals.filter(decision="pending").update(decision="cancelled", version=models.F("version") + 1)
         finish_locked(attempt, "cancelled", error="用户取消排队任务")
     else:
         append_event(attempt, "cancel_requested", {})
@@ -73,7 +80,7 @@ def finish_locked(attempt: Attempt, state: str, *, result: str = "", error: str 
     """调用方持有 Task/Attempt 锁；只在确认子进程停止后完成执行。"""
     attempt.state, attempt.result, attempt.error = state, result, error
     attempt.activity = dict(Task.Status.choices)[state]
-    attempt.finished_at = timezone.now()
+    attempt.finished_at = None if state == "waiting_approval" else timezone.now()
     attempt.save(update_fields=["state", "result", "error", "activity", "finished_at"])
     Task.objects.filter(pk=attempt.task_id).update(status=state)
     append_event(attempt, "finished", {"state": state, "error": error})
@@ -89,13 +96,15 @@ def record_event(attempt_id, token, kind: str, data: dict) -> bool:
     if attempt.heartbeat_at < timezone.now() - timedelta(seconds=20):
         return False
     append_event(attempt, kind, data)
+    from .projections import update_activity_locked
+    update_activity_locked(attempt, kind, data)
     attempt.activity = {"model": "模型正在处理", "tool_start": "正在调用工具", "tool_end": "工具已返回"}.get(kind, attempt.activity)
     attempt.save(update_fields=["activity"])
     return True
 
 
 @transaction.atomic
-def complete(attempt_id, token, *, state: str, result: str = "", error: str = "") -> bool:
+def complete(attempt_id, token, *, state: str, result: str = "", error: str = "", snapshot: dict | None = None) -> bool:
     task_id = Attempt.objects.values_list("task_id", flat=True).get(pk=attempt_id)
     Task.objects.select_for_update().get(pk=task_id)
     attempt = Attempt.objects.select_for_update().get(pk=attempt_id)
@@ -111,5 +120,12 @@ def complete(attempt_id, token, *, state: str, result: str = "", error: str = ""
         return False
     if attempt.cancel_requested_at:
         state, result, error = "cancelled", "", "用户取消"
+    elif snapshot:
+        from .projections import apply_snapshot_locked
+        apply_snapshot_locked(attempt, snapshot)
+        if snapshot.get("pending"):
+            state, result, error = "waiting_approval", "", ""
+        elif snapshot.get("complete"):
+            state, result, error = "succeeded", snapshot["result"], ""
     finish_locked(attempt, state, result=result, error=error)
     return True

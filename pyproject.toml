@@ -1,6 +1,6 @@
 [project]
 name = "personal-superagent"
-version = "0.2.0"
+version = "0.3.0"
 description = "个人多 Agent 工作台：逐课实现"
 requires-python = ">=3.12,<3.13"
 dependencies = [
@@ -10,6 +10,9 @@ dependencies = [
   "django>=5.2,<5.3",
   "psycopg[binary]>=3.2,<4",
   "psutil>=7,<8",
+  "langgraph-checkpoint-sqlite>=3,<4",
+  "markdown-it-py>=4,<5",
+  "gunicorn>=23,<24",
 ]
 
 [project.scripts]
@@ -22,6 +25,7 @@ build-backend = "hatchling.build"
 [dependency-groups]
 dev = ["pytest>=9,<10"]
 browser = ["playwright>=1.58,<2"]
+deploy = ["paramiko>=4,<6"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

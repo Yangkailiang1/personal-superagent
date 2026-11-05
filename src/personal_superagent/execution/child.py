@@ -4,9 +4,12 @@ import os
 import sys
 import threading
 
+OUTPUT_LOCK = threading.Lock()
+
 
 def emit(kind: str, data: dict) -> None:
-    print(json.dumps({"kind": kind, "data": data}, ensure_ascii=False), flush=True)
+    with OUTPUT_LOCK:
+        print(json.dumps({"kind": kind, "data": data}, ensure_ascii=False), flush=True)
 
 
 def watch_parent() -> None:
@@ -17,15 +20,22 @@ def watch_parent() -> None:
 
 
 def main() -> None:
+    os.umask(0o077)
     payload = json.loads(sys.stdin.buffer.readline())
     threading.Thread(target=watch_parent, daemon=True).start()
     try:
-        from .agent import run_agent
-        result = run_agent(payload["snapshot"], payload["mode"], emit)
-        emit("result", {"text": result})
+        if payload.get("workflow_version"):
+            from personal_superagent.workflow.checkpoints import run_workflow
+            data = run_workflow(payload, emit)
+            emit("snapshot", data)
+        else:
+            from .agent import run_agent
+            result = run_agent(payload["snapshot"], payload["mode"], emit)
+            emit("result", {"text": result})
     except Exception as exc:
         # 原始供应商异常可能包含请求信息，不进入 stdout / DB / 日志。
-        emit("error", {"code": type(exc).__name__, "message": "执行失败，请检查模型配置、网络与工具能力。"})
+        message = str(exc) if type(exc).__name__ == "CheckpointError" else "执行失败，请检查模型配置、网络与工具能力。"
+        emit("error", {"code": type(exc).__name__, "message": message[:500]})
         raise SystemExit(1) from None
 
 

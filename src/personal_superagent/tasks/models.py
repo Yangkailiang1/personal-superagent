@@ -25,6 +25,7 @@ class Task(models.Model):
         PENDING = "pending", "待执行"
         QUEUED = "queued", "排队中"
         RUNNING = "running", "运行中"
+        WAITING_APPROVAL = "waiting_approval", "待审批"
         SUCCEEDED = "succeeded", "成功"
         FAILED = "failed", "失败"
         CANCELLED = "cancelled", "已取消"

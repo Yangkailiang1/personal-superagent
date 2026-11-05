@@ -29,12 +29,13 @@ class Running:
     result: str = ""
     error: str = ""
     eof: bool = False
+    snapshot: dict | None = None
 
 
 def read_protocol(running: Running) -> None:
     try:
-        while line := running.process.stdout.readline(65537):
-            if len(line) > 65536:
+        while line := running.process.stdout.readline(262145):
+            if len(line) > 262144:
                 running.messages.put({"kind": "error", "data": {"code": "OutputLimit"}})
                 break
             try:
@@ -95,7 +96,17 @@ def spawn(attempt: Attempt) -> Running | None:
             if current.state != "running" or current.claim_token != attempt.claim_token:
                 terminate(process)
                 return None
-        process.stdin.write((json.dumps({"snapshot": attempt.input_snapshot, "mode": attempt.mode}) + "\n").encode())
+        from personal_superagent.workflow.checkpoints import checkpoint_dir
+        decisions = {}
+        for approval in attempt.approvals.filter(checkpoint_id=attempt.checkpoint_id).order_by("interrupt_id", "action_index"):
+            if approval.decision in {"approve", "reject"}:
+                decisions.setdefault(approval.interrupt_id, {"decisions": []})["decisions"].append({"type": approval.decision})
+        payload = {
+            "snapshot": attempt.input_snapshot, "mode": attempt.mode, "workflow_version": attempt.workflow_version,
+            "attempt_id": str(attempt.pk), "action": attempt.execution_action,
+            "checkpoint_dir": str(checkpoint_dir(attempt.pk)), "decisions": decisions if attempt.execution_action == "resume" else {},
+        }
+        process.stdin.write((json.dumps(payload) + "\n").encode())
         process.stdin.flush()
         running = Running(attempt, process)
         threading.Thread(target=read_protocol, args=[running], daemon=True).start()
@@ -120,7 +131,11 @@ def consume(running: Running) -> None:
             running.result = redact(str(data.get("text", "")))[:32000]
         elif kind == "error":
             running.error = "执行失败（" + str(data.get("code", "AgentError"))[:80] + "），请检查配置、网络或工具。"
-        elif kind in {"model", "tool_start", "tool_end"}:
+            if data.get("code") == "CheckpointError":
+                running.error = redact(str(data.get("message", "checkpoint 无法恢复")))[:500]
+        elif kind == "snapshot":
+            running.snapshot = json.loads(redact(json.dumps(data, ensure_ascii=False)))
+        elif kind in {"model", "tool_start", "tool_end", "plan", "subagent_start", "subagent_end", "subgraph"}:
             safe = json.loads(redact(json.dumps(data, ensure_ascii=False)))
             record_event(running.attempt.pk, running.attempt.claim_token, kind, safe)
 
@@ -155,10 +170,11 @@ def run_worker(*, concurrency: int, timeout: int, once: bool = False, max_jobs: 
                     consume(item)
                     if not item.eof:
                         continue
-                    success = item.process.returncode == 0 and bool(item.result) and not item.error
+                    snapshot = item.snapshot if item.process.returncode == 0 and not item.error else None
+                    success = item.process.returncode == 0 and bool(item.result or snapshot) and not item.error
                     complete(current.pk, item.attempt.claim_token,
                              state="succeeded" if success else "failed", result=item.result if success else "",
-                             error=item.error or ("" if success else "执行进程异常退出或未交付结果"))
+                             error=item.error or ("" if success else "执行进程异常退出或未交付结果"), snapshot=snapshot)
                     item.process.stdin.close()
                     item.process.stdout.close()
                     running.remove(item)

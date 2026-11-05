@@ -38,8 +38,10 @@ def claim_next(worker_id) -> Attempt | None:
     attempt.worker_id = worker_id
     attempt.hostname = socket.gethostname()
     attempt.claim_token = uuid.uuid4()
+    attempt.process_id = attempt.process_birth = None
     attempt.process_stopped = False
-    attempt.started_at = attempt.heartbeat_at = timezone.now()
+    attempt.started_at = attempt.started_at or timezone.now()
+    attempt.heartbeat_at = timezone.now()
     attempt.activity = "准备执行子进程"
     attempt.save()
     task.status = "running"
