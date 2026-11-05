@@ -14,6 +14,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.cache import never_cache
+from django.utils.cache import patch_vary_headers
 from django.db import transaction
 
 from personal_superagent.tasks.forms import TaskForm
@@ -51,11 +52,36 @@ def asset(request, path):
         or not file.resolve().is_relative_to((DIST / "assets").resolve())
     ):
         raise Http404
+    encoded = file.with_name(file.name + ".gz")
+    use_gzip = False
+    for item in request.headers.get("Accept-Encoding", "").split(","):
+        parts = item.strip().split(";")
+        if parts[0].lower() == "gzip":
+            try:
+                use_gzip = (
+                    float(
+                        next(
+                            (
+                                p.strip()[2:]
+                                for p in parts[1:]
+                                if p.strip().startswith("q=")
+                            ),
+                            "1",
+                        )
+                    )
+                    > 0
+                )
+            except ValueError:
+                pass
+    use_gzip = use_gzip and encoded.is_file() and not encoded.is_symlink()
     response = FileResponse(
-        file.open("rb"),
+        (encoded if use_gzip else file).open("rb"),
         content_type=mimetypes.guess_type(file)[0] or "application/octet-stream",
     )
     response["Cache-Control"] = "public, max-age=31536000, immutable"
+    patch_vary_headers(response, ["Accept-Encoding"])
+    if use_gzip:
+        response["Content-Encoding"] = "gzip"
     return response
 
 

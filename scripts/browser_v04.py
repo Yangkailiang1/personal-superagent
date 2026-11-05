@@ -34,7 +34,11 @@ with tempfile.TemporaryDirectory() as folder, sync_playwright() as p:
     page.get_by_label("用户名").fill(credentials["BROWSER_TEST_USER"])
     page.get_by_label("密码").fill(credentials["BROWSER_TEST_PASSWORD"])
     page.get_by_role("button",name="登录",exact=True).click()
-    expect(page.get_by_role("heading",name="把想法交给工作台")).to_be_visible()
+    try:
+        expect(page.get_by_role("heading",name="把想法交给工作台")).to_be_visible(timeout=30000)
+    except AssertionError:
+        print("Browser diagnostics:",page.url,errors,page.locator("body").inner_text()[:800])
+        raise
     Path(".artifacts").mkdir(exist_ok=True)
     page.screenshot(path=".artifacts/v04-home.png",full_page=True)
     page.get_by_role("button",name="设备与授权",exact=True).click()
