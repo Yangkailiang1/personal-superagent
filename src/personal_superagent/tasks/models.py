@@ -1,4 +1,4 @@
-"""业务任务与执行图分开保存；本课只允许创建和读取。"""
+"""业务任务与执行图分开保存；执行状态由受控生命周期入口更新。"""
 import uuid
 
 from django.conf import settings
@@ -10,11 +10,11 @@ class Task(models.Model):
 
     与 agent 执行图（节点、事件、checkpoint）分开存储：本表只记录
     "用户要什么"，执行过程由另一套模型负责，两者通过外键关联。
-    本课范围只允许创建和读取，不提供更新/删除接口。
+    任务正文只提供创建和读取；状态由 execution 模块更新，不接受表单赋值。
     """
 
     class Status(models.TextChoices):
-        """任务状态枚举。本课只有一个状态，后续课程再扩展。
+        """任务状态枚举；V0.2 扩展排队、执行和终态。
 
         TextChoices 的每个成员是 (数据库值, 人类可读标签)：
         数据库存 "pending"，Admin/表单里显示 "待执行"。
@@ -23,6 +23,12 @@ class Task(models.Model):
         """
 
         PENDING = "pending", "待执行"
+        QUEUED = "queued", "排队中"
+        RUNNING = "running", "运行中"
+        SUCCEEDED = "succeeded", "成功"
+        FAILED = "failed", "失败"
+        CANCELLED = "cancelled", "已取消"
+        INTERRUPTED = "interrupted", "中断"
 
     # 主键使用 UUID 而不是默认的自增整数。
     # 好处：ID 由应用层生成（default=uuid.uuid4），插入前就知道主键，

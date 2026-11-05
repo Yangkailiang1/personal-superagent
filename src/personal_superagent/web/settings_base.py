@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",   # 内容类型框架，支持外键关联任意模型
     "django.contrib.sessions",       # 会话管理，支持登录状态保持
     "personal_superagent.tasks",     # 本项目核心任务模块
+    "personal_superagent.execution",
 ]
 
 # 中间件栈，按请求处理顺序排列。

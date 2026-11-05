@@ -1,4 +1,63 @@
 {% extends 'tasks/base.html' %}
-{% block content %}<h1>{{ task.title }}</h1><p>{{ task.get_status_display }}</p>
-<pre>{{ task.description }}</pre><p>任务已保存；后台执行将在下一课接入。</p>
-<a href="{% url 'task_list' %}">返回任务列表</a>{% endblock %}
+{% block content %}
+<h1>{{ task.title }}</h1><p id="state">{{ task.get_status_display }}</p>
+<pre>{{ task.description }}</pre>
+{% if can_start or can_retry %}
+<form method="post" action="{% url 'attempt_start' task.id %}">{% csrf_token %}
+<input type="hidden" name="request_key" value="{{ request_key }}">
+<input type="hidden" name="action" value="{% if can_retry %}retry{% else %}start{% endif %}">
+<label>执行方式 <select name="mode"><option value="demo">离线演示（只分析任务文本）</option><option value="real">真实模型（调用供应商，可能收费）</option></select></label>
+<button>{% if can_retry %}新建执行并重试{% else %}启动任务{% endif %}</button></form>
+{% endif %}
+{% if active %}<form method="post" action="{% url 'attempt_cancel' task.id active.id %}">{% csrf_token %}<button>{% if active.cancel_requested_at %}已申请取消{% else %}取消执行{% endif %}</button></form>{% endif %}
+{% if unsafe and not active %}<p>旧进程尚未确认停止，重试已阻止。请保持或重新启动原主机 Worker 进行核验。</p>{% endif %}
+{% if latest %}
+<p id="activity">{{ latest.activity }} · {{ latest.get_mode_display }}</p>
+<pre id="result">{{ latest.result }}</pre><pre id="error">{{ latest.error }}</pre>
+<details><summary>执行过程</summary><ul id="events"></ul></details>
+<h2>执行历史</h2>
+{% for attempt in attempts %}<details><summary>{{ attempt.created_at|date:"m-d H:i:s" }} · {{ attempt.get_state_display }} · {{ attempt.get_mode_display }}</summary>
+<p>执行 ID：{{ attempt.id }}</p><p>开始：{{ attempt.started_at|default:"—" }}　结束：{{ attempt.finished_at|default:"—" }}</p>
+<pre>{{ attempt.result }}</pre><pre>{{ attempt.error }}</pre>
+<a href="{% url 'attempt_events' task.id attempt.id %}">查看该次事件与结果</a>
+</details>{% endfor %}
+<script>
+(() => {
+  let cursor = 0;
+  let wasActive = {{ active|yesno:"true,false" }};
+  const wasUnconfirmed = {{ unsafe|yesno:"true,false" }};
+  const url = "{% url 'attempt_events' task.id latest.id %}";
+  const labels = {queued:"排队中",running:"运行中",succeeded:"成功",failed:"失败",cancelled:"已取消",interrupted:"中断"};
+  async function refresh() {
+    try {
+      const response = await fetch(`${url}?after=${cursor}`, {cache:"no-store"});
+      if (response.redirected) { location.assign(response.url); return; }
+      if (!response.ok) throw new Error("读取失败");
+      const data = await response.json();
+      document.getElementById("state").textContent = labels[data.state] || data.state;
+      document.getElementById("activity").textContent = `${data.activity} · ${data.mode === "demo" ? "离线演示" : "真实模型"}`;
+      document.getElementById("result").textContent = data.result;
+      document.getElementById("error").textContent = data.error;
+      for (const event of data.events) {
+        const li = document.createElement("li");
+        li.textContent = `${event.sequence} · ${event.kind} · ${JSON.stringify(event.data)}`;
+        document.getElementById("events").appendChild(li);
+      }
+      cursor = data.cursor;
+      if (data.has_more) { setTimeout(refresh, 0); return; }
+      const active = ["queued", "running"].includes(data.state);
+      if (wasActive && !active) { location.reload(); return; }
+      if (wasUnconfirmed && !active && data.process_stopped) { location.reload(); return; }
+      wasActive = active;
+      if (active || !data.process_stopped) setTimeout(refresh, 2000);
+    } catch (_) {
+      document.getElementById("activity").textContent = "连接暂时中断，正在重试；不会取消任务。";
+      setTimeout(refresh, 2000);
+    }
+  }
+  refresh();
+})();
+</script>
+{% endif %}
+<p><a href="{% url 'task_list' %}">返回任务列表</a></p>
+{% endblock %}

@@ -1,6 +1,7 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_GET, require_http_methods
+from uuid import uuid4
 
 from .forms import TaskForm
 from .services import create_task, get_task, list_tasks
@@ -21,6 +22,13 @@ def task_list(request):
 @login_required
 @require_GET
 def task_detail(request, task_id):
+    task = get_task(user=request.user, task_id=task_id)
+    attempts = list(task.attempts.order_by("-created_at"))
+    active = next((a for a in attempts if a.state in {"queued", "running"}), None)
+    unsafe = any(not a.process_stopped for a in attempts)
     return render(request, "tasks/detail.html", {
-        "task": get_task(user=request.user, task_id=task_id),
+        "task": task, "attempts": attempts, "latest": attempts[0] if attempts else None,
+        "active": active, "unsafe": unsafe, "request_key": uuid4(),
+        "can_start": task.status == "pending",
+        "can_retry": task.status in {"failed", "cancelled", "interrupted"} and not unsafe,
     })
