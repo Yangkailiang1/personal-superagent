@@ -35,3 +35,13 @@
 每次执行使用独立子进程，管道 EOF 检测父进程丢失；重试前核验旧进程身份与停止事实，不自动重放。没有 checkpoint，不承诺透明续跑。事件用同源轮询，避免此阶段引入 SSE 部署与重连的额外变量。系统无 OS 沙箱，只提供无副作用工具白名单。
 
 运行配置使用独立 `.env.dev`，不会覆盖用户既有 `.env`。网页和 Worker 分开运行，PostgreSQL Compose 只绑定本机，开发与公网生产配置明确区分。
+
+## ADR-008：原生协作、审批与单主机 checkpoint（2026-11-05）
+
+V0.3 复用 task、TodoListMiddleware、interrupt_on 和 LangGraph Command，不再维护第二套模型循环。子 Agent 没有保存与委派权限，产物只从已批准图状态投影到数据库。并行文档按调用 ID 合并，不最后写入覆盖。
+
+每 Attempt 独立 SQLite saver，业务队列仍 PostgreSQL；子进程不持有业务数据库凭证。两存储没有总事务，以 checkpoint 先提交、稳定 ID 补齐业务投影；缺失、不兼容或损坏明确拒绝。此选择限制为原主机恢复，未来多机需要重新设计存储与权限。
+
+## ADR-009：SSH 隧道本人验证部署（2026-11-05）
+
+用户选择 SSH 隧道，不开放公网网页。独立应用用户和 uv Python 3.12，不替换系统 Python；PostgreSQL 专用容器，Web/Worker 独立 systemd 服务，loopback 监听，服务器默认禁止真实模型模式。代码按提交归档、校验 SHA256、迁移前备份，不上传开发配置/数据库/.server，不承诺自动数据库回滚。

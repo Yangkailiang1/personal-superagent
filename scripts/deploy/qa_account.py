@@ -12,7 +12,14 @@ if "--delete" in sys.argv:
     data = json.loads(target.read_text())
     if not data["BROWSER_TEST_USER"].startswith("_qa_v03_"):
         raise SystemExit("不是本脚本临时账号，拒绝删除")
-    operation = "User.objects.filter(username=data['BROWSER_TEST_USER']).delete(); print('临时验收账号与关联记录已清理')"
+    operation = '''from personal_superagent.execution.models import Attempt
+import shutil
+attempt_ids=list(Attempt.objects.filter(task__owner__username=data['BROWSER_TEST_USER']).values_list('id',flat=True))
+User.objects.filter(username=data['BROWSER_TEST_USER']).delete()
+for attempt_id in attempt_ids:
+    directory=Path('/opt/personal-superagent/shared/runtime')/str(attempt_id)
+    if directory.is_dir() and not directory.is_symlink(): shutil.rmtree(directory)
+print('临时验收账号、任务与 checkpoint 已清理')'''
 else:
     if target.exists():
         raise SystemExit("验收配置已存在，请先清理原临时账号")
