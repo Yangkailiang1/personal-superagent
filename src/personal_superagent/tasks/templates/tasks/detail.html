@@ -1,0 +1,4 @@
+{% extends 'tasks/base.html' %}
+{% block content %}<h1>{{ task.title }}</h1><p>{{ task.get_status_display }}</p>
+<pre>{{ task.description }}</pre><p>任务已保存；后台执行将在下一课接入。</p>
+<a href="{% url 'task_list' %}">返回任务列表</a>{% endblock %}

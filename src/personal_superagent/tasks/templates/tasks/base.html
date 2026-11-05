@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>个人 Agent 工作台</title>
+<style>
+body{font:16px/1.6 system-ui,sans-serif;color:#222;background:#fafafa;margin:0}
+main{max-width:760px;margin:40px auto;padding:0 24px}nav{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #ddd;padding-bottom:16px}
+a{color:inherit}input,textarea,button{font:inherit;padding:8px;border:1px solid #ccc;border-radius:6px;background:white;box-sizing:border-box}
+input,textarea{width:100%}button{cursor:pointer}h1{font-size:24px}li{margin:12px 0}pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit}.errorlist{color:#a32020}
+</style></head><body><main>
+<nav><a href="/">个人 Agent 工作台</a>{% if user.is_authenticated %}<form method="post" action="{% url 'logout' %}">{% csrf_token %}{{ user.username }} <button>退出</button></form>{% endif %}</nav>
+{% block content %}{% endblock %}
+</main></body></html>

@@ -1,0 +1,4 @@
+{% extends 'tasks/base.html' %}
+{% block content %}<h1>登录</h1>
+<form method="post">{% csrf_token %}{{ form.as_p }}<input type="hidden" name="next" value="{{ next }}"><button>登录</button></form>
+{% endblock %}
