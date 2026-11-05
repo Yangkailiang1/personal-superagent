@@ -36,6 +36,7 @@ with sync_playwright() as p:
         expect(page.get_by_role("button", name="批准保存", exact=True)).to_be_visible()
         page.reload()
         expect(page.get_by_role("button", name="批准保存", exact=True)).to_be_visible()
+        expect(page.get_by_text("任务与结果", exact=True)).to_have_count(2)
         expect(page.get_by_role("link", name="任务整理.md", exact=True)).to_have_count(0)
         expect(page.locator("#subtasks")).to_contain_text("writer")
         expect(page.locator("#subtasks")).to_contain_text("reviewer")

@@ -53,6 +53,7 @@
       document.getElementById("result").innerHTML = data.result_html;
       document.getElementById("error").textContent = data.error;
       for (const [id, entries] of [["plan", data.plan.map(t => `${t.content} · ${t.status}`)], ["subtasks", data.subtasks.map(t => `${t.role} · ${t.state}`)]]) {
+        if (id === "subtasks" && !["queued", "running"].includes(initialState)) continue;
         const list = document.getElementById(id); list.replaceChildren();
         for (const text of entries) { const li = document.createElement("li"); li.textContent = text; list.appendChild(li); }
       }

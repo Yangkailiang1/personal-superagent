@@ -16,6 +16,9 @@ with tempfile.TemporaryDirectory() as temporary:
     with connect() as client:
         with client.open_sftp() as sftp:
             sftp.put(str(archive), remote_archive)
-        script = (Path(__file__).parent / "release.sh").read_text()
-        result = run(client, f"bash -se -- {shlex.quote(revision)} {shlex.quote(digest)}", script)
+            script_path = f"/tmp/personal-superagent-release-{revision}.sh"
+            sftp.put(str(Path(__file__).parent / "release.sh"), script_path)
+            sftp.chmod(script_path, 0o600)
+        # 不经 bash stdin 传脚本：docker compose exec 会读取 stdin，可能吞掉后续脚本。
+        result = run(client, f"bash {shlex.quote(script_path)} {shlex.quote(revision)} {shlex.quote(digest)} </dev/null")
         raise SystemExit(result)

@@ -35,7 +35,7 @@ if systemctl cat personal-superagent-worker >/dev/null 2>&1; then systemctl stop
 if systemctl cat personal-superagent-web >/dev/null 2>&1; then systemctl stop personal-superagent-web; fi
 backup="$base/backups/$(date -u +%Y%m%dT%H%M%SZ)"
 install -d -m 0700 "$backup"
-docker compose --env-file "$base/shared/runtime.env" exec -T postgres pg_dump -U personal_superagent personal_superagent > "$backup/database.sql"
+docker compose --env-file "$base/shared/runtime.env" exec -T postgres pg_dump -U personal_superagent personal_superagent </dev/null > "$backup/database.sql"
 tar -cf "$backup/runtime.tar" -C "$base/shared" runtime
 runuser -u superagent -- env HOME=/home/superagent /home/superagent/.local/bin/uv run --env-file "$base/shared/runtime.env" --locked --no-dev manage.py migrate
 runuser -u superagent -- env HOME=/home/superagent /home/superagent/.local/bin/uv run --env-file "$base/shared/runtime.env" --locked --no-dev manage.py check
