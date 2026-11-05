@@ -1,6 +1,6 @@
 # 产品总纲
 
-当前交付方式：助手逐版开发并提供设计与验证说明；教学课程保留参考。V0.3 已实现多 Agent、审批与恢复，并部署服务器供本人经 SSH 隧道验证；本地设备和公网内测仍待后续版本。
+当前交付方式：助手逐版开发并提供设计与验证说明；教学课程保留参考。V0.4 已实现多 Agent、审批恢复、设备绑定、授权本地工具及新工作台，服务器供本人经 SSH 隧道验证；公网内测仍待 V0.5。
 
 ## 目标
 
@@ -24,7 +24,7 @@
 - DeepAgents / LangGraph 负责执行图、工具循环和后续子 Agent；不重新实现另一套模型循环。
 - PostgreSQL 保存业务数据、队列领取；LangGraph checkpoint 保存执行状态。业务记录不等于 checkpoint。
 - 独立 Worker 执行长任务，初期不引入 Celery、Redis 或微服务。
-- 前端具体实现到对应课再确定；先验证接口和行为。
+- React + TypeScript + assistant-ui，同源 Session / CSRF；Django 仍是状态事实来源。
 
 DeepSeek Harness 是执行平台参考，SuperAgent 是其上层编排应用参考。本项目不 fork 整套 TypeScript 平台；借鉴任务、授权、派工、跟进和结果交付机制。
 

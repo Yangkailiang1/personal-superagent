@@ -4,6 +4,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -39,6 +40,7 @@ with tempfile.TemporaryDirectory() as folder, sync_playwright() as p:
     except AssertionError:
         print("Browser diagnostics:",page.url,errors,page.locator("body").inner_text()[:800])
         raise
+    expect(page.get_by_text("云端已连接", exact=True)).to_be_visible(timeout=30000)
     Path(".artifacts").mkdir(exist_ok=True)
     page.screenshot(path=".artifacts/v04-home.png",full_page=True)
     page.get_by_role("button",name="设备与授权",exact=True).click()
@@ -59,11 +61,16 @@ with tempfile.TemporaryDirectory() as folder, sync_playwright() as p:
     page.get_by_role("button",name="启动",exact=True).click()
     task_id = page.url.split("task=")[1]
     approved=False
-    for _ in range(16):
+    deadline = time.monotonic() + 300
+    previous_state = None
+    while time.monotonic() < deadline:
         worker()
         page.wait_for_timeout(1600)
         data=page.request.get(origin+"/api/task/?id="+task_id,max_retries=3).json()
         state=data["state"]
+        if state != previous_state:
+            print("Browser task state:", state, flush=True)
+            previous_state = state
         if state=="queued": continue
         if state=="waiting_device":
             cli("run","--once")

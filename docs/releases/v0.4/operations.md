@@ -97,8 +97,26 @@ uv run --env-file .env.dev --locked manage.py agent_worker
 
 本地访问 http://127.0.0.1:8002/app/。修改 Python 后重启服务；非自动重载服务的模板也会缓存。
 
-测试：`manage.py test personal_superagent.tasks personal_superagent.execution personal_superagent.devices`（配合 .env.dev）以及 `uv run pytest -q`。浏览器验收用 scripts/browser_v04.py，必须使用专用临时账号与测试目录，不在真实资料目录执行。
+测试：`manage.py test personal_superagent.tasks personal_superagent.execution personal_superagent.devices personal_superagent.web.tests`（配合 .env.dev）以及 `uv run pytest -q`。浏览器验收用 scripts/browser_v04.py，必须使用专用临时账号与测试目录，不在真实资料目录执行。
 
 发布继续用 `scripts/deploy/release.py`，先提交并测试代码；本机构建后上传静态资源，服务器不需要 Node。迁移前备份数据库与 checkpoint，保留现有账号和 V0.3 图恢复；不自动回滚数据库。
 
 本人 SSH 隧道部署不是多用户公网开放。邀请内测前还需要 HTTPS、登录限速、配额、设备凭证治理和备份恢复演练，不能向其他用户分发 SSH root 凭证。
+
+
+### 一条完整示例
+
+在终端新建测试材料（已有目录请换一个名字，不覆盖旧资料）：
+
+```bash
+mkdir "$HOME/superagent-v04-notes"
+# 用文本编辑器在该目录创建 input.md，写入三项学习目标。
+uv run --locked superagent-client grant \
+  --name 学习笔记 --path "$HOME/superagent-v04-notes" \
+  --tools list_files,read_text,write_text --ack-cloud-transfer
+uv run --locked superagent-client run
+```
+
+网页选择这个目录，输入“阅读 input.md，整理一份学习计划并检查”。点击创建、启动。第一次待审批时看清“本地新建文件”的目录标签、相对路径及正文，批准后检查本机 superagent-result.md。第二次审批是保存云端交付文档，批准后可在线预览和下载。整个过程可以关闭网页后重新登录查看；客户端关闭则后续本地步骤等待。
+
+再次执行演示时目标文件已存在会被明确拒绝，不会覆盖；请为下一次验收使用新的专用测试目录。真实模式使用当前范围内的工具与用户目标，只有显式配置并允许时才调用付费模型。

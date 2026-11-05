@@ -45,3 +45,16 @@ V0.3 复用 task、TodoListMiddleware、interrupt_on 和 LangGraph Command，不
 ## ADR-009：SSH 隧道本人验证部署（2026-11-05）
 
 用户选择 SSH 隧道，不开放公网网页。独立应用用户和 uv Python 3.12，不替换系统 Python；PostgreSQL 专用容器，Web/Worker 独立 systemd 服务，loopback 监听，服务器默认禁止真实模型模式。代码按提交归档、校验 SHA256、迁移前备份，不上传开发配置/数据库/.server，不承诺自动数据库回滚。
+
+
+## ADR-010：本地操作通过 checkpoint 中断，不让模型持有设备凭证
+
+V0.4 的本地工具只描述请求，通过原生 interrupt 持久化；Worker 投影为 PostgreSQL LocalOperation，再回收执行进程。设备主动短轮询领取，确定结果后恢复同一图。相比图内长时间 HTTP 等待，这样不占用模型额度，并保留重启核对点。绝对目录只存本机，子 Agent 不授予本地工具。
+
+## ADR-011：未知结果保守停止，拒绝宣称 exactly-once
+
+客户端 SQLite 账本在副作用前写 started、报告前持久化结果。网络重试只重发已知回执；started 崩溃或租约过期变 uncertain，不自动重领。撤销与已经开始的写入存在竞态，不能撤回已生效结果；新建文件不覆盖是额外保护，不取代账本和租约。
+
+## ADR-012：同源 assistant-ui 与旧图兼容
+
+按用户要求引入 assistant-ui（MIT）的实际 Runtime/Composer/Message 原语；不引入云端托管或第二套登录。展示状态由 Django 快照提供，2 秒轮询。新入口 /app/，旧页面保留。冻结 V0.3 图源码并按版本分流，避免升级后旧审批 checkpoint 被新代码误读。发布预压缩静态文件；真实隧道大包下载慢促成此优化，非性能 SLA。
