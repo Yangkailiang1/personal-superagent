@@ -13,6 +13,7 @@ import {
   Laptop,
 } from "lucide-react";
 import { api, states, toolNames, type Task } from "./api";
+import { RouteTarget } from "./RouteTarget";
 import { History } from "./History";
 import { Conversation, Markdown } from "./Chat";
 
@@ -28,6 +29,7 @@ export function TaskDetail({
   onError: (s: string) => void;
 }) {
   const [mode, setMode] = useState("demo");
+  const [verifiedStop, setVerifiedStop] = useState(false);
   const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState("conversation");
   const attempt = task.attempt;
@@ -66,6 +68,67 @@ export function TaskDetail({
         </span>
       </header>
       {tab === "history" && <History task={task} />}
+      {task.release_id && task.state === "pending" && !task.attempt && (
+        <RouteTarget task={task} onRefresh={onRefresh} onError={onError} />
+      )}
+      {task.agent && (
+        <p className="data-notice">
+          执行角色：{task.agent.name} ·{" "}
+          {task.agent.device_id ? "本机设备回传（非独立验证）" : "云端"}
+        </p>
+      )}
+      {task.routes?.map((route, i) => (
+        <p className="data-notice" key={i}>
+          路由：{route.reason || route.state}
+        </p>
+      ))}
+      {task.attempt?.images?.map((image) => (
+        <figure key={image.id}>
+          <a href={`/api/images/${image.id}/`} target="_blank" rel="noreferrer">
+            <img
+              style={{ maxWidth: "100%", maxHeight: 500 }}
+              src={`/api/images/${image.id}/`}
+              alt="任务图片产物"
+            />
+          </a>
+          <figcaption>
+            <a href={`/api/images/${image.id}/?download=1`}>下载图片</a>
+          </figcaption>
+        </figure>
+      ))}
+      {task.attempt?.execution_device_id &&
+        !task.attempt.stopped &&
+        ["interrupted", "cancelled"].includes(task.state) && (
+          <div className="draft-panel">
+            <p>
+              云端无法确认本机旧进程是否仍在运行。请先在原设备核实，确认后才能释放归属；未知文件副作用仍需检查。
+            </p>
+            <label>
+              <input
+                type="checkbox"
+                checked={verifiedStop}
+                onChange={(e) => setVerifiedStop(e.target.checked)}
+              />
+              我已在原设备确认进程停止
+            </label>
+            <button
+              disabled={!verifiedStop}
+              onClick={async () => {
+                try {
+                  await api("/api/collaboration/ack-stop/", {
+                    id: task.attempt!.id,
+                    confirmed: true,
+                  });
+                  onRefresh();
+                } catch (e) {
+                  onError(String(e));
+                }
+              }}
+            >
+              记录人工停止确认
+            </button>
+          </div>
+        )}
       <div className="task-toolbar">
         <div className="tabs">
           {[

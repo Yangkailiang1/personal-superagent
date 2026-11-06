@@ -63,6 +63,10 @@ class Task(models.Model):
     # 因 settings.USE_TZ=True，存储的是带时区的 UTC 时间。
     created_at = models.DateTimeField(auto_now_add=True)
     local_grant = models.ForeignKey("devices.Grant", null=True, blank=True, on_delete=models.SET_NULL)
+    release = models.ForeignKey("collaboration.Release", null=True, on_delete=models.CASCADE, related_name="tasks")
+    execution_agent = models.ForeignKey("collaboration.AgentProfile", null=True, on_delete=models.SET_NULL, related_name="tasks")
+    dispatch = models.JSONField(default=dict)
+    dependencies = models.ManyToManyField("self", symmetrical=False, blank=True)
     local_file = models.CharField(max_length=200, default="input.md")
 
     class Meta:

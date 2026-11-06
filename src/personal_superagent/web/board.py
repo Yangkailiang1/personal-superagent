@@ -33,7 +33,20 @@ def card(task):
         activity = "操作结果未知，需人工核实" if unknown else "等待本地设备执行"
         scope = attempt.input_snapshot.get("device") or {}
         reason = f"{scope.get('device_name', '')} / {scope.get('label', '')}"
+    if task.release_id and task.status == "pending":
+        if task.dependencies.exclude(status="succeeded").exists():
+            activity = "依赖任务尚未成功交付"
+        elif task.routes.filter(state="failed").exists():
+            column = "attention"
+            activity = "路由失败，请调整计划或执行目标"
+            reason = task.routes.filter(state="failed").last().reason
+        else:
+            activity = "等待路由或执行资源（指定设备离线时保持等待）"
     return {
+        "agent": task.execution_agent.name if task.execution_agent_id else "未分派",
+        "route_reason": task.routes.order_by("-id").first().reason
+        if task.routes.exists()
+        else "",
         "id": str(task.pk),
         "kind": "task",
         "title": task.title,
@@ -98,7 +111,11 @@ def dashboard(request):
         for c in Conversation.objects.filter(
             owner=request.user, title__icontains=query
         ):
-            if c.draft and not c.confirmations.filter(version=c.version).exists():
+            if (
+                c.draft
+                and not c.confirmations.filter(version=c.version).exists()
+                and not c.releases.filter(version=c.version).exists()
+            ):
                 items.append(
                     {
                         "id": str(c.pk),

@@ -14,8 +14,9 @@ import {
 } from "lucide-react";
 import { api, csrf, states, type Bootstrap, type Task } from "./api";
 import { TaskComposer } from "./Chat";
+import { MainChat } from "./MainChat";
+import { Knowledge } from "./Knowledge";
 import { Board } from "./Board";
-import { Intake } from "./Intake";
 import { Devices } from "./Devices";
 import { TaskDetail } from "./TaskDetail";
 import "./style.css";
@@ -33,7 +34,7 @@ function App() {
   const [view, setView] = useState(
       new URLSearchParams(location.search).has("intake")
         ? "intake"
-        : new URLSearchParams(location.search).get("view") || "board",
+        : new URLSearchParams(location.search).get("view") || "intake",
     ),
     [selected, setSelected] = useState(
       new URLSearchParams(location.search).get("task") || "",
@@ -115,14 +116,15 @@ function App() {
           <span className="brand-icon">
             <Sparkle size={19} />
           </span>
-          superagent<span className="version">0.5</span>
+          superagent<span className="version">0.6</span>
         </a>
         <button
           className="new-task"
           onClick={() => {
             setSelected("");
             setTask(null);
-            setView("home");
+            setIntakeId("");
+            setView("intake");
             history.replaceState(null, "", "/app/");
           }}
         >
@@ -131,8 +133,9 @@ function App() {
         </button>
         <nav>
           {[
+            ["intake", "主对话", Layers],
             ["board", "任务看板", LayoutGrid],
-            ["intake", "需求对话", Layers],
+            ["knowledge", "知识与长期任务", Layers],
             ["home", "快速创建", Plus],
             ["queue", "任务队列", Layers],
             ["devices", "设备与授权", Laptop],
@@ -207,7 +210,7 @@ function App() {
             {view === "board"
               ? "任务看板"
               : view === "intake"
-                ? "需求对话"
+                ? "主对话"
                 : view === "devices"
                   ? "设备与授权"
                   : view === "queue"
@@ -241,8 +244,17 @@ function App() {
           />
         )}
         {view === "intake" && (
-          <Intake initialId={intakeId} onTask={choose} devices={data.devices} />
+          <MainChat
+            initialId={intakeId}
+            onTask={choose}
+            onBoard={() => {
+              setView("board");
+              setSelected("");
+              history.replaceState(null, "", "/app/?view=board");
+            }}
+          />
         )}
+        {view === "knowledge" && <Knowledge />}
         {view === "home" && (
           <section className="home">
             <div className="home-heading">

@@ -27,6 +27,12 @@ def load(root: Path) -> dict:
 
 
 def save(root: Path, config: dict):
+    # 供受限工具读取的目录授权快照，不含 token；撤销时先更新它。
+    grants = root / "grants.next"
+    fd = os.open(grants, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as f:
+        json.dump(config.get("roots", []), f)
+    grants.replace(root / "grants.json")
     temporary = root / "client.next"
     fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     with os.fdopen(fd, "w") as handle:

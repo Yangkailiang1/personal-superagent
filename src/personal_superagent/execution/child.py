@@ -24,11 +24,14 @@ def main() -> None:
     payload = json.loads(sys.stdin.buffer.readline())
     threading.Thread(target=watch_parent, daemon=True).start()
     try:
-        if payload["snapshot"].get("kind") == "intake":
+        if payload["snapshot"].get("kind") in {"routing","knowledge","inspection"}:
+            from personal_superagent.collaboration.jobs import run_job
+            emit("result", {"text":run_job(payload["snapshot"],payload["mode"],emit)})
+        elif payload["snapshot"].get("kind") == "intake":
             from personal_superagent.intake.agent import run_intake
             emit("result", {"text": run_intake(payload["snapshot"], payload["mode"], emit)})
         elif payload.get("workflow_version"):
-            from personal_superagent.workflow.versions import module_for
+            from personal_superagent.execution.versions import module_for
             data = module_for(payload["workflow_version"]).run_workflow(payload, emit)
             emit("snapshot", data)
         else:

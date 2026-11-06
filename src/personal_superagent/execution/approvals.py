@@ -58,10 +58,14 @@ def resume(*, user, task_id, attempt_id):
         return attempt
     if attempt.state != "interrupted" or not attempt.process_stopped or attempt.cancel_requested_at:
         raise StateConflict("只可恢复已确认停止、未取消的中断执行")
+    if attempt.execution_device_id:
+        # 用户显式恢复；由原设备读取原 checkpoint，缺失/不兼容会失败，绝不从头执行。
+        queue_locked(attempt,"continue")
+        return attempt
     if attempt.hostname != socket.gethostname():
         raise StateConflict("checkpoint 只能在原执行主机恢复")
     try:
-        from personal_superagent.workflow.versions import module_for
+        from personal_superagent.execution.versions import module_for
         data = module_for(attempt.workflow_version).inspect_checkpoint(attempt)
     except (CheckpointError, ValueError) as exc:
         raise StateConflict(str(exc)) from None

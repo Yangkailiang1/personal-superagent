@@ -64,6 +64,13 @@ export type Device = {
   online: boolean;
   revoked: boolean;
   last_seen: string | null;
+  agents?: {
+    name: string;
+    role: string;
+    modes: string[];
+    tools: string[];
+    last_seen: string | null;
+  }[];
   grants: {
     id: string;
     label: string;
@@ -88,6 +95,10 @@ export type Task = TaskSummary & {
     error: string;
     created_at: string;
   }[];
+  release_id?: string | null;
+  dispatch?: any;
+  agent?: any;
+  routes?: any[];
   description: string;
   grant_id: string | null;
   attempt?: {
@@ -99,6 +110,7 @@ export type Task = TaskSummary & {
     error: string;
     stopped: boolean;
     workflow_version: string;
+    execution_device_id?: string | null;
     scope?: { device_id: string; device_name?: string; label: string } | null;
     started_at: string | null;
     finished_at: string | null;
@@ -106,6 +118,7 @@ export type Task = TaskSummary & {
     subtasks: any[];
     approvals: any[];
     artifacts: { id: number; name: string }[];
+    images?: { id: number; name: string }[];
     operations: any[];
     events: any[];
   };

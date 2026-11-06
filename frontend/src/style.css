@@ -1391,3 +1391,202 @@ h3 {
     gap: 16px;
   }
 }
+.main-chat-page {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  max-width: 1100px;
+  width: 100%;
+  margin: auto;
+  padding: 20px 36px;
+}
+.chat-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.chat-heading h1 {
+  font-size: 16px;
+  font-weight: 500;
+}
+.main-chat-scroll {
+  flex: 1;
+  overflow: auto;
+  padding: 25px 0;
+}
+.chat-welcome {
+  text-align: center;
+  padding: 12vh 0;
+  color: #888;
+}
+.chat-welcome h2 {
+  color: #292929;
+  font-size: 27px;
+  font-weight: 550;
+}
+.main-composer {
+  border: 1px solid #ddd;
+  border-radius: 16px;
+  padding: 15px;
+  background: #fff;
+  margin-top: 15px;
+  margin-bottom: 15px;
+  box-shadow: 0 5px 25px #00000004;
+}
+.main-composer textarea {
+  border: 0;
+  resize: none;
+  width: 100%;
+  height: 70px;
+  font: inherit;
+  outline: 0;
+}
+.main-composer > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.main-chat-page button,
+.knowledge-page button {
+  border: 1px solid #ddd;
+  border-radius: 7px;
+  background: #fff;
+  padding: 8px 13px;
+  cursor: pointer;
+}
+.main-chat-page .primary {
+  background: #292929;
+  color: #fff;
+  border-color: #292929;
+}
+.main-chat-page button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.main-chat-page select {
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 7px;
+  background: #fafafa;
+  font: inherit;
+}
+.chat-round {
+  margin: 0 0 25px;
+}
+.chat-round > .intake-user {
+  margin-left: 20%;
+  max-width: 80%;
+}
+.chat-round > small {
+  color: #999;
+}
+.question-card,
+.plan-card,
+.release-card {
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 24px;
+  margin: 20px 0;
+}
+.question-card h3,
+.plan-card h3 {
+  font-size: 15px;
+}
+.question-card > label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 13px;
+  margin: 9px 0;
+  cursor: pointer;
+}
+.question-card textarea,
+.plan-json {
+  width: 100%;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  min-height: 100px;
+  padding: 12px;
+  font: inherit;
+}
+.plan-json {
+  height: 350px;
+  font-family: monospace;
+}
+.plan-card article {
+  border-top: 1px solid #eee;
+  padding: 10px 0;
+}
+.plan-card p {
+  font-size: 13px;
+}
+.plan-card small {
+  color: #888;
+}
+.plan-card .board-filters label {
+  font-size: 11px;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.plan-card .board-filters input {
+  width: 100px;
+}
+.inline-error {
+  color: #a34c38;
+  font-size: 13px;
+}
+.knowledge-page {
+  max-width: 1100px;
+  width: 100%;
+  margin: auto;
+  overflow: auto;
+}
+.knowledge-page h2 {
+  font-size: 18px;
+  margin-top: 30px;
+}
+.knowledge-page input:not([type="checkbox"]),
+.knowledge-page textarea {
+  display: block;
+  width: 100%;
+  border: 1px solid #ddd;
+  border-radius: 7px;
+  padding: 10px;
+  margin: 10px 0;
+  font: inherit;
+}
+.knowledge-page textarea {
+  min-height: 130px;
+}
+.source-row {
+  display: block;
+  border-bottom: 1px solid #eee;
+  padding: 12px;
+}
+.knowledge-page pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 650px) {
+  .main-chat-page {
+    padding: 12px 18px;
+  }
+  .chat-heading {
+    flex-wrap: wrap;
+  }
+  .question-card,
+  .plan-card {
+    padding: 15px;
+  }
+  .chat-welcome {
+    padding-top: 10vh;
+  }
+  .chat-round > .intake-user {
+    margin-left: 10%;
+    max-width: 90%;
+  }
+}

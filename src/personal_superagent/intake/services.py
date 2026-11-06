@@ -9,7 +9,7 @@ from personal_superagent.tasks.models import Task
 from personal_superagent.execution.models import Attempt
 from personal_superagent.execution.lifecycle import StateConflict, append_event
 from .models import Conversation, Turn, Confirmation
-from .schema import Draft
+from personal_superagent.collaboration.schema import Plan as Draft
 
 
 def owned(user, id):
@@ -34,6 +34,9 @@ def send(user, id, data):
             raise StateConflict("请求键不能更改内容")
         return existing
     ensure_idle(c)
+    if data.get("upgrade_plan") is True and not c.plan_mode:
+        c.plan_mode = True
+        c.save(update_fields=["plan_mode"])
     if c.version != data["version"]:
         raise StateConflict("草稿已更新，请刷新")
     text, mode = data["text"], data["mode"]
@@ -46,6 +49,8 @@ def send(user, id, data):
 
         if not settings.ALLOW_REAL_MODE or status()["state"] != "ready":
             raise StateConflict("请先完成真实模型配置与验证")
+    if c.choices.filter(answered_at=None).exists():
+        raise StateConflict("请先回答当前选择题")
     messages = []
     for turn in c.turns.all():
         messages.append({"role": "user", "content": turn.text})
@@ -68,6 +73,31 @@ def send(user, id, data):
             "messages": messages,
             "draft": c.draft,
             "model_config": execution_config(mode),
+            "plan_mode": c.plan_mode,
+            "answers": list(
+                c.choices.exclude(answered_at=None).values("prompt", "answer")
+            ),
+            "agents": [
+                {
+                    "id": str(a.pk),
+                    "name": a.name,
+                    "role": a.role,
+                    "tools": a.tools,
+                    "grant_id": str(a.grant_id) if a.grant_id else "",
+                    "device_id": str(a.device_id) if a.device_id else "",
+                }
+                for a in __import__(
+                    "personal_superagent.collaboration.models",
+                    fromlist=["AgentProfile"],
+                ).AgentProfile.objects.filter(owner=user, enabled=True)
+            ],
+            "tasks": [
+                {"id": str(t.pk), "title": t.title, "status": t.status}
+                for t in Task.objects.filter(release__conversation=c)[:30]
+            ],
+            "knowledge": __import__(
+                "personal_superagent.knowledge.services", fromlist=["query"]
+            ).query(user, text[:500]),
         },
     )
     turn = Turn.objects.create(
@@ -166,6 +196,20 @@ def project_result(attempt):
             raise ValueError("版本冲突")
         turn.reply = str(result["reply"])[:10000]
         turn.save(update_fields=["reply"])
+        if result.get("question"):
+            from personal_superagent.collaboration.schema import Choice
+            from personal_superagent.collaboration.models import Question
+
+            choice = Choice.model_validate(result["question"])
+            if c.choices.filter(answered_at=None).exists():
+                raise ValueError("已有未回答问题")
+            Question.objects.create(
+                conversation=c,
+                version=c.version + 1,
+                prompt=choice.prompt,
+                options=choice.options,
+                source_turn=turn,
+            )
         c.draft = draft
         c.version += 1
         c.save(update_fields=["draft", "version"])

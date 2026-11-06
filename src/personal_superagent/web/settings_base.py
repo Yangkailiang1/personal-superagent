@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     "personal_superagent.execution",
     "personal_superagent.devices",
     "personal_superagent.intake",
+    "personal_superagent.collaboration",
 ]
 
 # 中间件栈，按请求处理顺序排列。
@@ -96,3 +97,6 @@ ALLOW_REAL_MODE = os.environ.get("ALLOW_REAL_MODE", "1") == "1"
 # 供 Django 框架/LiveServer 识别；SPA 构建资源独立通过 /app/assets/ 提供。
 STATIC_URL = "/static/"
 MEDIA_URL = "/media/"
+
+# 生图设备回传采用有大小上限的独立图片动作。
+DATA_UPLOAD_MAX_MEMORY_SIZE = 16 * 1024 * 1024

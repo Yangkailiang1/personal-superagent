@@ -96,11 +96,34 @@ def task_data(task):
         "created_at": task.created_at,
         "grant_id": str(task.local_grant_id) if task.local_grant_id else None,
         "source": None,
+        "dispatch": task.dispatch,
+        "release_id": str(task.release_id) if task.release_id else None,
+        "agent": {
+            "id": str(task.execution_agent_id),
+            "name": task.execution_agent.name,
+            "device_id": str(task.execution_agent.device_id)
+            if task.execution_agent.device_id
+            else None,
+        }
+        if task.execution_agent_id
+        else None,
+        "routes": list(task.routes.values("state", "reason", "agent_id")),
     }
     from personal_superagent.intake.models import Confirmation
+
     source = Confirmation.objects.filter(task=task).first()
-    if source: data["source"] = {"conversation_id": str(source.conversation_id), "version": source.version, "draft": source.draft, "message_ids": source.source_turn_ids}
-    data["attempts"] = list(task.attempts.order_by("-created_at").values("id", "state", "mode", "error", "created_at"))
+    if source:
+        data["source"] = {
+            "conversation_id": str(source.conversation_id),
+            "version": source.version,
+            "draft": source.draft,
+            "message_ids": source.source_turn_ids,
+        }
+    data["attempts"] = list(
+        task.attempts.order_by("-created_at").values(
+            "id", "state", "mode", "error", "created_at"
+        )
+    )
     if attempt:
         data["attempt"] = {
             "id": str(attempt.pk),
@@ -114,6 +137,9 @@ def task_data(task):
             "finished_at": attempt.finished_at,
             "stopped": attempt.process_stopped,
             "workflow_version": attempt.workflow_version,
+            "execution_device_id": str(attempt.execution_device_id)
+            if attempt.execution_device_id
+            else None,
             "scope": attempt.input_snapshot.get("device"),
             "subtasks": list(
                 attempt.subtasks.values(
@@ -124,6 +150,7 @@ def task_data(task):
                 attempt.approvals.values("id", "decision", "version", "action")
             ),
             "artifacts": list(attempt.artifacts.values("id", "name")),
+            "images": list(attempt.image_assets.values("id", "name")),
             "operations": list(
                 attempt.local_operations.values(
                     "id", "tool", "arguments", "state", "reason"
@@ -164,6 +191,11 @@ def api(request, action):
                             and not device.revoked_at
                         ),
                         "last_seen": device.last_seen,
+                        "agents": list(
+                            device.agentprofile_set.filter(enabled=True).values(
+                                "name", "role", "modes", "tools", "last_seen"
+                            )
+                        ),
                         "grants": list(
                             device.grants.values(
                                 "id",
@@ -179,7 +211,8 @@ def api(request, action):
             return JsonResponse(
                 {
                     "user": request.user.username,
-                    "real_enabled": settings.ALLOW_REAL_MODE and model_status()["state"] == "ready",
+                    "real_enabled": settings.ALLOW_REAL_MODE
+                    and model_status()["state"] == "ready",
                     "tasks": [
                         {
                             "id": str(t.pk),
@@ -187,14 +220,23 @@ def api(request, action):
                             "state": t.status,
                             "created_at": t.created_at,
                         }
-                        for t in Task.objects.filter(owner=request.user, kind="task")[:100]
+                        for t in Task.objects.filter(owner=request.user, kind="task")[
+                            :100
+                        ]
                     ],
                     "devices": devices,
                 }
             )
         if action == "task" and request.method == "GET":
             return JsonResponse(
-                task_data(get_object_or_404(Task, owner=request.user, kind="task", pk=UUID(request.GET["id"])))
+                task_data(
+                    get_object_or_404(
+                        Task,
+                        owner=request.user,
+                        kind="task",
+                        pk=UUID(request.GET["id"]),
+                    )
+                )
             )
         if action == "create" and request.method == "POST":
             if not isinstance(data.get("text"), str):

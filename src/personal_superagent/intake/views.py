@@ -28,6 +28,12 @@ def serialize(c):
             for t in c.turns.select_related("attempt")
         ],
         "confirmed": list(c.confirmations.values("version", "task_id")),
+        "questions": list(
+            c.choices.order_by("id").values(
+                "id", "prompt", "options", "answer", "answered_at"
+            )
+        ),
+        "releases": list(c.releases.values("id", "version", "policy")),
     }
 
 
@@ -54,14 +60,33 @@ def endpoint(request, action):
                         )
                     }
                 )
-            c = Conversation.objects.create(owner=request.user)
+            from personal_superagent.collaboration.routing import provision
+
+            provision(request.user)
+            c = Conversation.objects.create(
+                owner=request.user, plan_mode=data.get("style") == "plan"
+            )
             return JsonResponse(serialize(c), status=201)
         id = UUID(data["id"])
         if action == "conversation" and request.method == "GET":
             return JsonResponse(serialize(owned(request.user, id)))
         if request.method != "POST":
             raise ValueError()
-        if action == "send":
+        if action == "answer":
+            from personal_superagent.collaboration.questions import answer
+
+            answer(request.user, id, data)
+        elif action == "publish":
+            from personal_superagent.collaboration.plans import publish
+
+            release = publish(request.user, id, data)
+            return JsonResponse(
+                {
+                    "release_id": str(release.pk),
+                    "task_ids": [str(t.pk) for t in release.tasks.all()],
+                }
+            )
+        elif action == "send":
             send(request.user, id, data)
         elif action == "edit":
             edit(request.user, id, data)

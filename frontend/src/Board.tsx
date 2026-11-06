@@ -132,7 +132,9 @@ export function Board({
                             ? "草稿"
                             : "尚未启动"}
                     </span>
+                    <small>{i.agent}</small>
                     <p>{i.activity}</p>
+                    {i.route_reason && <small>{i.route_reason}</small>}
                     {i.reason && (
                       <small className="card-reason">{i.reason}</small>
                     )}

@@ -75,6 +75,9 @@ def run_intake(snapshot, mode, emit):
 
         if snapshot["model_config"] != execution_config(mode):
             raise ValueError("模型配置已变化，请重新发送需求")
+    if snapshot.get("plan_mode"):
+        from personal_superagent.collaboration.conversation_agent import run
+        return run(snapshot,mode,emit)
     draft = snapshot.get("draft", {})
 
     @tool

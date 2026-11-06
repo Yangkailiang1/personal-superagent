@@ -26,10 +26,26 @@ def main():
     start = sub.add_parser("run")
     start.add_argument("--once", action="store_true")
     sub.add_parser("status")
+    sub.add_parser("agent-config")
+    sub.add_parser("agent-check")
+    sub.add_parser("agent-tools")
+    agent = sub.add_parser("agent-run")
+    agent.add_argument("--once", action="store_true")
     args = parser.parse_args()
     try:
         root = directory(args.config_dir)
-        if args.action == "pair":
+        if args.action == "agent-tools":
+            from .tools_config import configure
+
+            configure(root)
+        elif args.action in {"agent-config", "agent-check", "agent-run"}:
+            from .worker_agent import configure_model, run as run_agent
+
+            if args.action == "agent-run":
+                run_agent(root, once=args.once)
+            else:
+                configure_model(root, verify=args.action == "agent-check")
+        elif args.action == "pair":
             if (root / "client.json").exists():
                 raise ValueError("已有绑定配置，请使用独立配置目录，不覆盖原凭证")
             config = {"url": validate_url(args.url), "roots": []}

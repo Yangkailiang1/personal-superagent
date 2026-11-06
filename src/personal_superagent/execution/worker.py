@@ -53,14 +53,14 @@ def read_protocol(running: Running) -> None:
 def child_environment() -> dict[str, str]:
     """不把数据库密码、Django 密钥或宿主供应商凭据传给 Agent 子进程。"""
     names = ["PATH", "LANG", "LC_ALL", "SYSTEMROOT", "TMPDIR", "SSL_CERT_FILE",
-             "MODEL_API_KEY", "MODEL_NAME", "MODEL_BASE_URL", "HTTPS_PROXY", "HTTP_PROXY", "NO_PROXY"]
+             "MODEL_API_KEY", "MODEL_NAME", "MODEL_BASE_URL", "TAVILY_API_KEY", "IMAGE_API_KEY", "IMAGE_BASE_URL", "IMAGE_MODEL_NAME", "MCP_CONFIG", "HTTPS_PROXY", "HTTP_PROXY", "NO_PROXY"]
     env = {name: os.environ[name] for name in names if name in os.environ}
     env.update(PYTHONUNBUFFERED="1", LANGSMITH_TRACING="false")
     return env
 
 
 def redact(text: str) -> str:
-    for name in ["MODEL_API_KEY", "PGPASSWORD", "DJANGO_SECRET_KEY"]:
+    for name in ["MODEL_API_KEY", "TAVILY_API_KEY", "IMAGE_API_KEY", "PGPASSWORD", "DJANGO_SECRET_KEY"]:
         secret = os.environ.get(name)
         if secret:
             text = text.replace(secret, "[REDACTED]")
@@ -163,12 +163,16 @@ def run_worker(*, concurrency: int, timeout: int, once: bool = False, max_jobs: 
             if time.monotonic() - last_sweep > 5:
                 from personal_superagent.devices.protocol import sweep
                 sweep()
+                from personal_superagent.collaboration.routing import dispatch_pending
+                from personal_superagent.knowledge.services import schedule_due
+                dispatch_pending()
+                schedule_due()
                 last_sweep = time.monotonic()
             for item in list(running):
                 consume(item)
                 current = Attempt.objects.get(pk=item.attempt.pk)
                 expired = not heartbeat(current.pk, item.attempt.claim_token)
-                timed_out = time.monotonic() - item.started >= timeout
+                timed_out = time.monotonic() - item.started >= min(timeout,current.input_snapshot.get("policy",{}).get("timeout",timeout))
                 if expired or current.cancel_requested_at or timed_out or item.error:
                     terminate(item.process)
                     item.error = item.error or ("执行超时" if timed_out else "执行被取消或领取已失效")

@@ -10,6 +10,7 @@ from personal_superagent.tasks.models import Task
 class Attempt(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="attempts")
+    execution_device = models.ForeignKey("devices.Device", null=True, on_delete=models.SET_NULL)
     request_key = models.UUIDField()
     state = models.CharField(max_length=24, choices=Task.Status.choices, default=Task.Status.QUEUED)
     mode = models.CharField(max_length=8, choices=[("demo", "离线演示"), ("real", "真实模型")])

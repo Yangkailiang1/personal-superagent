@@ -68,7 +68,7 @@ export function Devices({
           <div className="empty">
             <Laptop size={34} />
             <h3>连接你的电脑</h3>
-            <p>云端负责思考与编排，本地只执行你允许的工具。</p>
+            <p>云端编排任务；本机可运行独立 Agent，也可只提供文件工具。</p>
             <p>设备离线时，任务会等待，不会偷偷改用服务器目录。</p>
           </div>
         )}
@@ -102,6 +102,11 @@ export function Devices({
                 </button>
               )}
             </header>
+            <p className="data-notice">
+              {device.agents?.length
+                ? `独立工作 Agent：${[...new Set(device.agents.map((a) => a.role))].join("、")} · ${device.agents.some((a) => a.modes.includes("real")) ? "真实模型已声明可用" : "仅演示模型"}`
+                : "尚未连接独立工作 Agent；原文件客户端仍可使用。"}
+            </p>
             <div className="grants">
               {device.grants.length === 0 && (
                 <p className="muted">尚未授权目录。请在本地使用 grant 命令。</p>

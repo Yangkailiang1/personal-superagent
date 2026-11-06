@@ -8,6 +8,7 @@ from django.views.decorators.cache import never_cache
 
 from .auth import authenticate, pair
 from .models import LocalOperation
+from django.core.exceptions import ObjectDoesNotExist
 from .protocol import poll, report, validate_lease
 
 
@@ -17,7 +18,9 @@ from .protocol import poll, report, validate_lease
 def endpoint(request, action):
     """仅设备 Bearer 身份，不接受浏览器 Session；不为 Cookie 接口关闭 CSRF。"""
     try:
-        if len(request.body) > 160000:
+        if len(request.body) > (
+            15 * 1024 * 1024 if action == "agent-control" else 160000
+        ):
             raise ValueError("请求超过大小限制")
         data = json.loads(request.body)
         if not isinstance(data, dict):
@@ -35,6 +38,20 @@ def endpoint(request, action):
         device = authenticate(request)
         if device is None:
             return JsonResponse({"error": "设备凭证无效或已撤销"}, status=401)
+        if action.startswith("agent-"):
+            from personal_superagent.collaboration.device_jobs import (
+                hello,
+                claim,
+                control,
+            )
+
+            if action == "agent-hello":
+                return JsonResponse(hello(device, data))
+            if action == "agent-claim":
+                return JsonResponse(claim(device))
+            if action == "agent-control":
+                return JsonResponse(control(device, data))
+            raise ValueError("未知设备接口")
         if not isinstance(data.get("session"), str):
             raise ValueError("会话结构不合法")
         if action in {"connect", "poll"}:
@@ -61,7 +78,13 @@ def endpoint(request, action):
         else:
             raise ValueError("未知设备接口")
         return JsonResponse({"ok": True})
-    except (ValueError, KeyError, TypeError, LocalOperation.DoesNotExist):
+    except (
+        ValueError,
+        KeyError,
+        TypeError,
+        LocalOperation.DoesNotExist,
+        ObjectDoesNotExist,
+    ):
         return JsonResponse(
             {"error": "参数、绑定码、会话或操作授权无效，请检查配置"}, status=400
         )
