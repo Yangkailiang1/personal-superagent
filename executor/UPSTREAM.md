@@ -5,6 +5,7 @@ MIT 许可证原文位于 `src/upstream/LICENCE`；原始文件与 SHA-256 位�
 
 - `PushableAsyncIterable.ts`：原样复用，与冻结参考逐字相同。
 - `backend.ts`：由上游 `ClaudeSdkAgentBackend.ts` 适配。保留可推送输入、会话 init 标识、工具调用 ID 校验、权限回调、显式 result 收尾与 abort 生命周期。删除语音、relay、后台子任务及上游内部依赖；query 改用固定的官方 Claude Agent SDK 0.2.123。
+- Blender 专用的 `thinking: disabled` 和 8192 输出上限由本项目添加，用于限制结构化建模与收尾响应；不代表 Happier 上游默认配置，也不放宽工具权限。
 - 上游 `claudeExplicitRunnerStop.ts` 保留参考：停止必须等待真实受管进程退出；Python supervisor 负责进程组终止和回执。
 - 原始 `.reference` 文件仅作审计，不参与编译，不宣称完整原版 Happier CLI 已被迁入。
 
