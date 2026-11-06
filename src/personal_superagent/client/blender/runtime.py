@@ -358,9 +358,7 @@ def sync_files(root, connection):
     index.write_text(json.dumps(data["files"]))
 
 
-def run(root, once=False):
-    connection = load(root)
-    db = Ledger(root)
+def reconcile(root, connection, db):
     # 未完成账本不可当作从未执行；保留并阻止自动重派。
     for id, payload, pid, birth, result in db.unfinished():
         job = json.loads(payload)
@@ -395,12 +393,34 @@ def run(root, once=False):
             db.finish(id, json.loads(result))
         call(connection, job, "result", report=json.loads(result))
         db.ack(id)
-    while True:
-        request(connection, "modeling-hello", {"config": manifest(root)})
-        sync_files(root, connection)
-        job = request(connection, "modeling-claim", {})["job"]
-        if job:
-            execute(root, connection, db, job)
-        if once:
-            return
-        time.sleep(2)
+
+
+def run(root, once=False):
+    connection = load(root)
+    db = Ledger(root)
+    try:
+        while True:
+            try:
+                reconcile(root, connection, db)
+                request(connection, "modeling-hello", {"config": manifest(root)})
+                sync_files(root, connection)
+                job = request(connection, "modeling-claim", {})["job"]
+                if job:
+                    execute(root, connection, db, job)
+                if once:
+                    return
+            except OSError as exc:
+                from urllib.error import HTTPError
+
+                if isinstance(exc, HTTPError) and exc.code in {400, 401, 403, 404, 409}:
+                    raise ValueError(
+                        "设备凭证、协议或执行归属已失效，请检查本机记录"
+                    ) from None
+                if once:
+                    raise
+                # 只重连控制面和补传回执，绝不把中断执行当成新任务启动。
+                time.sleep(3)
+                continue
+            time.sleep(2)
+    finally:
+        db.db.close()
