@@ -102,6 +102,7 @@ class MainPolicy(AgentMiddleware):
         self.calls = 0
         self.emit = emit
         self.require_action = False
+        self.required_tools = {"ask_user", "update_plan"}
         self.actions = set()
 
     def wrap_model_call(self, request, handler):
@@ -110,7 +111,7 @@ class MainPolicy(AgentMiddleware):
             raise ValueError("对话最多八次模型调用")
         self.emit("model", {"role": "main", "call": self.calls})
         # 补全时只开放提问/计划工具，不能再用“接下来会提问”代替实际交互。
-        names = {"ask_user", "update_plan"} if self.require_action else self.names
+        names = self.required_tools if self.require_action else self.names
         return handler(
             request.override(
                 tools=[
@@ -202,20 +203,35 @@ def run(snapshot, mode, emit):
         },
         config={"recursion_limit": 16},
     )
-    # 读完知识后只输出过渡话术不是有效任务交互。最多补全一次，共享八次调用预算；
-    # 进展查询可以直接回答，其余轮次必须真正提出问题或保存计划，不根据措辞猜状态。
-    if not policy.actions.intersection({"ask_user", "update_plan", "read_tasks"}):
+    # Plan.questions 只是问题清单，不是可操作的问答。保留问题，要求模型真正调用
+    # ask_user；不能由前端猜选项、替用户作答或直接删掉问题来解除发布关卡。
+    for correction in range(2):
+        needs_choice = bool(saved.get("questions")) and pending is None
+        needs_action = not policy.actions.intersection({"ask_user", "update_plan", "read_tasks"})
+        if not needs_choice and not needs_action:
+            break
+        if correction and not needs_choice:
+            break
         policy.require_action = True
+        policy.required_tools = {"ask_user"} if needs_choice else {"ask_user", "update_plan"}
         emit("activity", {"label": "正在补全问题或计划"})
+        instruction = (
+            "当前计划仍有未决问题：" + json.dumps(saved["questions"], ensure_ascii=False)
+            + "。必须立即调用 ask_user，就其中一个关键问题提供恰好三个具体、互斥的选项；系统另提供自行输入。不能只把问题留在 Plan.questions，不能替用户回答或清空问题，也不能只承诺稍后提问。"
+            if needs_choice else
+            "本轮尚未产生可操作的问题或计划。请现在调用 ask_user 提出一个关键问题（恰好三个具体选项），或调用 update_plan 保存可发布计划。不能只承诺稍后提问；不代表用户已经确认或授权执行。"
+        )
         result = graph.invoke(
             {"messages": [*result["messages"], {
                 "role": "user",
-                "content": "本轮尚未产生可操作的问题或计划。请现在调用 ask_user 提出一个关键问题（恰好三个具体选项），或调用 update_plan 保存可发布计划。不能只承诺稍后提问；不代表用户已经确认或授权执行。",
+                "content": instruction,
             }]},
             config={"recursion_limit": 16},
         )
-        if not policy.actions.intersection({"ask_user", "update_plan"}):
-            raise ValueError("模型没有生成可操作的问题或计划，请重新发送；未发布任何任务")
+    if saved.get("questions") and pending is None:
+        raise ValueError("模型没有生成澄清选项，请重新发送；未发布任何任务")
+    if not policy.actions.intersection({"ask_user", "update_plan", "read_tasks"}):
+        raise ValueError("模型没有生成可操作的问题或计划，请重新发送；未发布任何任务")
     reply = result["messages"][-1].content
     output = {"reply": str(reply)[:10000], "draft": saved, "question": pending}
     encoded = json.dumps(output, ensure_ascii=False)

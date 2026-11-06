@@ -49,7 +49,7 @@ export function PlanControls({
             ))}
           </ul>
           <button onClick={onClarify} disabled={busy || clarifying}>
-            {waitingChoice ? "回答上方选择题" : "补充回答"}
+            {waitingChoice ? "回答上方选择题" : "生成澄清选项"}
           </button>
         </section>
       )}

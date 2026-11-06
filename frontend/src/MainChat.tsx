@@ -300,9 +300,10 @@ export function MainChat({
                   document.querySelector<HTMLElement>(".question-card input")?.focus();
                   return;
                 }
-                // 只预填问题，不代替用户回答，也不自动调用模型或清除发布关卡。
-                setText(current => current.trim() ? current : c.draft.questions.map((q: string) => `关于“${q}”\n我的回答：`).join("\n\n"));
-                requestAnimationFrame(() => document.getElementById("main-chat-message")?.focus());
+                action("send", {
+                  text: "请把当前计划的待澄清问题通过 ask_user 提供三个具体可选项，另保留自行输入。不要替我回答，也不要发布任务。",
+                  mode, request_key: crypto.randomUUID(),
+                });
               }}
               assumptions={c.draft.assumptions || []} accepted={accept} onAccept={setAccept}
               calls={calls} images={images} onCalls={setCalls} onImages={setImages}

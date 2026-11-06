@@ -14,6 +14,7 @@ class ScriptedModel(BaseChatModel):
     replies: list
     calls: int = 0
     forced: bool = False
+    forced_tools: list = []
 
     @property
     def _llm_type(self):
@@ -22,7 +23,9 @@ class ScriptedModel(BaseChatModel):
     def bind_tools(self, tools, **kwargs):
         if kwargs.get("tool_choice") == "required":
             self.forced = True
-            assert {t.name if hasattr(t, "name") else t["name"] for t in tools} == {"ask_user", "update_plan"}
+            names = {t.name if hasattr(t, "name") else t["name"] for t in tools}
+            assert names <= {"ask_user", "update_plan"}
+            self.forced_tools.append(names)
         return self
 
     def _generate(self, messages, **kwargs):
@@ -75,3 +78,23 @@ def test_existing_question_does_not_trigger_extra_model_call():
     assert invoke(model)["question"] is not None
     assert not model.forced
     assert model.calls == 2
+
+
+def test_plan_questions_must_produce_three_choices_without_dropping_question():
+    plan = {"title": "苹果模型", "goal": "建模苹果", "materials": "用户需求", "deliverables": ["模型"], "acceptance": ["可打开"], "device_needs": "本机", "questions": ["需要何种表皮细节？"], "assumptions": [], "steps": []}
+    model = ScriptedModel(replies=[
+        tool("update_plan", {"plan": plan}), AIMessage(content="请先确认细节。"),
+        tool("ask_user", {"question": {"prompt": "需要何种表皮细节？", "options": ["光滑表面", "细小斑点", "斑点与轻微瑕疵"]}}),
+        AIMessage(content="请选择。"),
+    ])
+    result = invoke(model)
+    assert result["draft"]["questions"] == plan["questions"]
+    assert len(result["question"]["options"]) == 3
+    assert model.forced_tools == [{"ask_user"}]
+
+
+def test_plan_with_unresolved_questions_cannot_silently_finish():
+    plan = {"title": "苹果模型", "goal": "建模苹果", "materials": "用户需求", "deliverables": ["模型"], "acceptance": ["可打开"], "device_needs": "本机", "questions": ["需要何种表皮细节？"], "assumptions": [], "steps": []}
+    model = ScriptedModel(replies=[tool("update_plan", {"plan": plan}), AIMessage(content="请自行回答。")])
+    with pytest.raises(ValueError, match="没有生成澄清选项"):
+        invoke(model)
