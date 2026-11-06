@@ -25,7 +25,7 @@ class IntakeDemo(BaseChatModel):
                 content="已整理任务草稿。请核对目标和验收标准，确认后再启动后台任务。（离线演示）"
             )
         else:
-            text = str(messages[-1].content)
+            text = str(messages[-1].content).rsplit("用户最新需求：", 1)[-1]
             reply = AIMessage(
                 content="",
                 tool_calls=[

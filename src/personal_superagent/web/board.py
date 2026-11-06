@@ -119,6 +119,10 @@ def dashboard(request):
     return JsonResponse(
         {
             "columns": COLUMNS,
+            "counts": {
+                key: sum(1 for item in items if item["column"] == key)
+                for key, _ in COLUMNS
+            },
             "items": list(current),
             "total": paginator.count,
             "page": current.number,

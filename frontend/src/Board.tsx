@@ -109,9 +109,7 @@ export function Board({
             <section className="kanban-column" key={key}>
               <h2>
                 {label}
-                <small>
-                  {data.items.filter((i: any) => i.column === key).length}
-                </small>
+                <small>{data.counts?.[key] || 0}</small>
               </h2>
               {data.items
                 .filter((i: any) => i.column === key)
@@ -147,7 +145,7 @@ export function Board({
                   </button>
                 ))}
               {!data.items.some((i: any) => i.column === key) && (
-                <p className="column-empty">暂无任务</p>
+                <p className="column-empty">本页无任务</p>
               )}
             </section>
           ))}
