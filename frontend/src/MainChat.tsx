@@ -31,6 +31,10 @@ export function MainChat({
     setId(initialId);
   }, [initialId]);
   useEffect(() => {
+    const lastMode = c?.turns.at(-1)?.mode;
+    if (lastMode) setMode(lastMode);
+  }, [c?.id]);
+  useEffect(() => {
     history.replaceState(null, "", id ? `/app/?intake=${id}` : "/app/");
   }, [id]);
   useEffect(() => {
@@ -142,7 +146,7 @@ export function MainChat({
             <div className="intake-user">{t.text}</div>
             <small>
               {t.mode === "real" ? "真实模型" : "离线演示"} ·{" "}
-              {states[t.state] || t.state}
+              {t.state === "succeeded" ? "本轮回复完成" : states[t.state] || t.state}
             </small>
             {t.reply && <Markdown text={t.reply} />}{" "}
             {t.error && <p className="inline-error">{t.error}</p>}
@@ -155,6 +159,7 @@ export function MainChat({
         ))}
         {pending && (
           <div className="question-card">
+            <small className="muted">等待你的选择</small>
             <h3>{pending.prompt}</h3>
             {pending.options.map((option: string, i: number) => (
               <label key={i}>
@@ -203,6 +208,19 @@ export function MainChat({
             >
               提交选择
             </button>
+          </div>
+        )}
+        {c?.turns.length > 0 && !running && !pending && !c.draft?.steps?.length && (
+          <div className="conversation-next">
+            <p>尚未形成计划，任务还没有发布。</p>
+            <button
+              disabled={busy}
+              onClick={() => action("send", {
+                text: c.turns.at(-1).text,
+                mode,
+                request_key: crypto.randomUUID(),
+              })}
+            >继续制定计划</button>
           </div>
         )}
         {c?.draft?.steps?.length > 0 && (
