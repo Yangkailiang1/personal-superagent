@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { api, states } from "./api";
 import { Markdown } from "./Chat";
+import { MainComposer } from "./MainComposer";
+import { PlanControls } from "./PlanControls";
 export function MainChat({
   initialId = "",
   onTask,
@@ -67,6 +69,17 @@ export function MainChat({
     running = c?.turns.some(
       (t: any) => ["queued", "running"].includes(t.state) || !t.stopped,
     );
+  // 确认只对当前修订有效，避免旧版勾选被沿用到新的假设。
+  useEffect(() => { setAccept(false); }, [c?.id, c?.version]);
+  const publishReason = c?.releases?.some((r: any) => r.version === c.version)
+    ? "这个版本已发布，可在任务看板查看进展。"
+    : running ? "本轮对话仍在处理，请等待完成。"
+    : pending ? "请先回答上方问题。"
+    : advanced ? "请先保存或收起计划编辑。"
+    : c?.draft?.questions?.length ? "计划仍有未决问题，请在对话中补充后再发布。"
+    : c?.draft?.assumptions?.length && !accept ? "请先确认以上假设，再发布计划。"
+    : !Number.isInteger(calls) || calls < 1 || calls > 48 || !Number.isInteger(images) || images < 0 || images > 2
+      ? "请在执行设置中填写有效限额。" : "";
   async function action(kind: string, extra: any = {}) {
     setBusy(true);
     setError("");
@@ -150,11 +163,7 @@ export function MainChat({
             </small>
             {t.reply && <Markdown text={t.reply} />}{" "}
             {t.error && <p className="inline-error">{t.error}</p>}
-            {["queued", "running"].includes(t.state) && (
-              <button onClick={() => action("cancel", { turn_id: t.id })}>
-                停止本轮
-              </button>
-            )}
+
           </div>
         ))}
         {pending && (
@@ -230,9 +239,9 @@ export function MainChat({
               <small>v{c.version}</small>
             </div>
             <Markdown text={c.draft.goal} />
-            {c.draft.steps.map((step: any) => (
+            {c.draft.steps.map((step: any, index: number) => (
               <article key={step.key}>
-                <h3>{step.title}</h3>
+                <h3 className="plan-step-title"><span>{index + 1}</span>{step.title}</h3>
                 <p>{step.goal}</p>
                 <small>
                   {step.role} · 依赖：{step.depends_on.join(", ") || "无"} ·
@@ -246,8 +255,11 @@ export function MainChat({
                 </label>}
                 {step.repository_id && <p className="data-notice">Claude · 基线 {step.base_commit.slice(0,12)} · 最多 {repositories.find(r=>r.id===step.repository_id)?.policy.max_turns ?? "待核查"} 轮 · 写入 {step.write_paths.join("、")} · 检查 {step.checks.join("；") || "未配置，不能视为测试通过"}。低风险及预授权命令自动执行，其余逐项审批；本机非安全沙箱。</p>}
                 {step.role==="modeler" && <p className="data-notice">Blender 任务按能力派给在线设备，文件只留本机，云端不接收模型或预览。</p>}
-                <p>交付：{step.deliverables.join("；")}</p>
-                <p>验收：{step.acceptance.join("；")}</p>
+                <details className="plan-step-evidence">
+                  <summary>交付与验收</summary>
+                  <h4>交付物</h4><ul>{step.deliverables.map((item: string, i: number) => <li key={i}>{item}</li>)}</ul>
+                  <h4>验收标准</h4><ul>{step.acceptance.map((item: string, i: number) => <li key={i}>{item}</li>)}</ul>
+                </details>
                 <small>
                   执行目标：
                   {agents.find((a) => a.id === step.agent_id)?.name ||
@@ -256,18 +268,9 @@ export function MainChat({
               </article>
             ))}
             <p>设备与权限：{c.draft.device_needs}</p>
-            <p>未决问题：{c.draft.questions?.join("；") || "无"}</p>
-            {c.draft.assumptions?.length > 0 && (
-              <label>
-                <input
-                  type="checkbox"
-                  checked={accept}
-                  onChange={(e) => setAccept(e.target.checked)}
-                />
-                接受假设：{c.draft.assumptions.join("；")}
-              </label>
-            )}
-            <button onClick={advancedEdit}>高级编辑</button>
+            {c.draft.questions?.length > 0 && <section className="plan-open-questions">
+              <h3>待澄清</h3><ul>{c.draft.questions.map((q: string, i: number) => <li key={i}>{q}</li>)}</ul>
+            </section>}
             {advanced && (
               <>
                 <textarea
@@ -293,60 +296,19 @@ export function MainChat({
                 </button>
               </>
             )}
-            <div className="board-filters">
-              <label>
-                每任务模型请求上限
-                <input
-                  aria-label="模型请求限额"
-                  type="number"
-                  min={1}
-                  max={48}
-                  value={calls}
-                  onChange={(e) => setCalls(Number(e.target.value))}
-                />
-              </label>
-              <label>
-                每任务生图上限
-                <input
-                  aria-label="生图限额"
-                  type="number"
-                  min={0}
-                  max={2}
-                  value={images}
-                  onChange={(e) => setImages(Number(e.target.value))}
-                />
-              </label>
-            </div>
-            {c.draft.steps.some((s:any)=>["coder","modeler"].includes(s.role)) && <p className="data-notice">代码任务将调用本机真实 Claude，可能产生模型费用。主对话的“离线演示”不适用于代码执行；点击发布即授权本计划的真实执行。</p>}
-            <button
-              className="primary"
-              disabled={
-                c.releases?.some((r: any) => r.version === c.version) ||
-                busy ||
-                running ||
-                pending ||
-                advanced ||
-                c.draft.questions?.length > 0 ||
-                (c.draft.assumptions?.length > 0 && !accept)
-              }
-              onClick={() =>
-                action("publish", {
-                  request_key: crypto.randomUUID(),
-                  accept_assumptions: accept,
-                  policy: {
-                    mode: c.draft.steps.every((s:any)=>["coder","modeler"].includes(s.role)) ? "real" : mode,
-                    max_model_calls: calls,
-                    max_images: images,
-                    timeout: 1800,
-                  },
-                })
-              }
-            >
-              发布并执行
-            </button>
-            <p className="data-notice">
-              授权本计划的任务、工具与执行限额；Claude 使用本机登录、仓库授权和轮次上限，其他执行器使用模型请求上限。依赖满足后自动派工，失败不自动重试。
-            </p>
+            <PlanControls
+              assumptions={c.draft.assumptions || []} accepted={accept} onAccept={setAccept}
+              calls={calls} images={images} onCalls={setCalls} onImages={setImages}
+              reason={publishReason} busy={busy} advanced={advanced} onEdit={advancedEdit}
+              localExecution={c.draft.steps.some((s: any) => ["coder", "modeler"].includes(s.role))}
+              onPublish={() => action("publish", {
+                request_key: crypto.randomUUID(), accept_assumptions: accept,
+                policy: {
+                  mode: c.draft.steps.every((s: any) => ["coder", "modeler"].includes(s.role)) ? "real" : mode,
+                  max_model_calls: calls, max_images: images, timeout: 1800,
+                },
+              })}
+            />
           </div>
         )}
         {c?.releases?.map((release: any) => (
@@ -356,39 +318,14 @@ export function MainChat({
           </div>
         ))}
       </div>
-      <form
-        className="main-composer"
-        onSubmit={(e) => {
-          e.preventDefault();
-          action("send", { text, mode, request_key: crypto.randomUUID() });
+      <MainComposer text={text} onText={setText} mode={mode} onMode={setMode}
+        pending={!!pending} running={!!running} busy={busy}
+        onSend={() => action("send", { text, mode, request_key: crypto.randomUUID() })}
+        onCancel={() => {
+          const turn = c?.turns.findLast((t: any) => ["queued", "running"].includes(t.state));
+          if (turn) action("cancel", { turn_id: turn.id });
         }}
-      >
-        <textarea
-          aria-label="主对话消息"
-          placeholder={
-            pending ? "请先回答上方问题" : "描述目标，或让我修改计划…"
-          }
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          disabled={!!pending}
-        />
-        <div>
-          <select
-            aria-label="主对话模型模式"
-            value={mode}
-            onChange={(e) => setMode(e.target.value)}
-          >
-            <option value="demo">离线演示</option>
-            <option value="real">真实模型</option>
-          </select>
-          <button
-            className="primary"
-            disabled={!text.trim() || busy || running || pending}
-          >
-            发送
-          </button>
-        </div>
-      </form>
+      />
     </section>
   );
 }

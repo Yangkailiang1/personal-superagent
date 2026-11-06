@@ -1404,10 +1404,10 @@ h3 {
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  max-width: 1100px;
+  max-width: 944px;
   width: 100%;
   margin: 0 auto;
-  padding: 16px 32px 8px;
+  padding: 16px 28px 8px;
   overflow: hidden;
 }
 .chat-heading {
@@ -1628,6 +1628,66 @@ h3 {
     margin-left: 10%;
     max-width: 90%;
   }
+}
+
+/* 聊天正文、计划确认和输入区共用一条阅读轴线。 */
+.main-chat-page { line-height: 1.6; }
+.chat-heading select { flex-basis: 300px; font-size: 12px; padding: 6px 10px; }
+.main-chat-page .plan-card { padding: 22px; border-color: #e5e5e5; margin: 24px 0 12px; }
+.plan-card .section-heading { gap: 12px; margin-bottom: 16px; }
+.plan-card .section-heading h2 { font-size: 16px; line-height: 1.5; }
+.plan-card .section-heading > small { flex: none; }
+.plan-card article { padding: 18px 0; }
+.plan-step-title { display: flex; align-items: baseline; gap: 9px; margin-bottom: 8px; }
+.plan-step-title > span { display: inline-grid; place-items: center; width: 21px; height: 21px; flex: none; border-radius: 5px; background: #f0f0f0; font-size: 12px; color: #777; }
+.plan-card article > small { display: block; margin-top: 7px; font-size: 12px; }
+.plan-card .data-notice { line-height: 1.65; margin: 8px 0; }
+.plan-step-evidence { margin: 10px 0; font-size: 13px; }
+.plan-step-evidence summary { cursor: pointer; color: #6c6c6c; font-size: 12px; }
+.plan-step-evidence h4 { margin: 12px 0 4px; font-size: 12px; font-weight: 500; color: #777; }
+.plan-card ul { margin: 8px 0; padding-left: 19px; }
+.plan-card li + li { margin-top: 6px; }
+.plan-open-questions { margin: 16px 0; padding: 14px 16px; background: #f7f7f7; border-radius: 8px; font-size: 13px; }
+.plan-controls { margin-top: 18px; border-top: 1px solid #eee; padding-top: 18px; }
+.plan-assumptions { margin-bottom: 18px; }
+.plan-assumptions h3 { font-size: 13px; font-weight: 600; }
+.plan-assumptions ul { font-size: 13px; color: #666; margin: 10px 0 14px; }
+.assumption-check { display: flex; align-items: flex-start; gap: 9px; cursor: pointer; font-size: 13px; }
+.assumption-check input { margin: 3px 0 0; width: 16px; height: 16px; flex: none; accent-color: #262626; }
+.execution-settings { border: 1px solid #eaeaea; border-radius: 8px; background: #fafafa; margin-bottom: 14px; }
+.execution-settings summary { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; cursor: pointer; padding: 12px 14px; font-size: 12px; list-style: none; }
+.execution-settings summary::-webkit-details-marker { display: none; }
+.execution-settings summary > span { display: inline-flex; align-items: center; gap: 7px; }
+.settings-summary { color: #888; }
+.execution-settings[open] .settings-summary svg { transform: rotate(180deg); }
+.execution-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; padding: 2px 14px 12px; }
+.execution-fields label { display: flex; flex-direction: column; gap: 6px; color: #777; font-size: 12px; }
+.execution-fields input { width: 100%; min-width: 0; height: 34px; padding: 6px 10px; border: 1px solid #ddd; border-radius: 6px; background: white; }
+.plan-card .execution-settings p { font-size: 12px; color: #888; padding: 0 14px 12px; margin: 0; }
+.plan-card .plan-execution-note { font-size: 12px; color: #888; margin: 14px 0; }
+.plan-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 18px; }
+.main-chat-page .plan-edit-button { border: 0; background: transparent; color: #777; padding: 7px 0; font-size: 12px; }
+.main-chat-page .plan-edit-button:hover { color: #222; }
+.main-chat-page .publish-button { border-radius: 8px; padding: 9px 14px; min-height: 38px; font-size: 13px; }
+.plan-card .plan-publish-hint { margin-top: 10px; color: #999; font-size: 11px; text-align: right; }
+.plan-card .plan-publish-hint.needs-action { color: #777; }
+.main-chat-page .main-composer { padding: 12px 14px 10px; margin: 12px 0 6px; border-radius: 18px; box-shadow: 0 2px 8px #00000004; }
+.main-composer textarea { display: block; min-height: 40px; max-height: 160px; height: 40px; padding: 0 2px 8px; font-size: 14px; line-height: 1.6; overflow-y: auto; background: transparent; }
+.main-composer textarea:disabled { background: transparent; }
+.main-composer .composer-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.composer-mode { position: relative; display: flex; align-items: center; }
+.main-chat-page .composer-mode select { appearance: none; border: 0; background: transparent; padding: 5px 24px 5px 5px; border-radius: 6px; cursor: pointer; font-size: 12px; color: #777; }
+.composer-mode > svg { pointer-events: none; position: absolute; right: 6px; color: #888; }
+.main-chat-page .composer-send { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 50%; background: #262626; color: white; flex: none; }
+.main-chat-page .composer-send:hover { background: #444; }
+.main-chat-page .composer-send:disabled { background: #e8e8e8; color: #a0a0a0; opacity: 1; }
+@media (max-width: 650px) {
+  .main-chat-page { padding: 10px 16px 8px; }
+  .main-chat-page .plan-card { padding: 16px; }
+  .execution-settings summary { gap: 4px; }
+  .settings-summary { font-size: 11px; }
+  .plan-actions { align-items: center; }
+  .main-chat-page .main-composer { margin-bottom: 0; }
 }
 
 /* 外部执行器交付卡沿用任务正文宽度；长分支与命令在小屏换行。 */
