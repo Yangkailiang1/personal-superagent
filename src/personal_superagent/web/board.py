@@ -42,6 +42,8 @@ def card(task):
             reason = task.routes.filter(state="failed").last().reason
         else:
             activity = "等待路由或执行资源（指定设备离线时保持等待）"
+            if task.dispatch.get('role')=='modeler':
+                activity="等待在线、已授权且模型就绪的 Blender 工作 Agent"
     return {
         "agent": task.execution_agent.name if task.execution_agent_id else "未分派",
         "route_reason": task.routes.order_by("-id").first().reason

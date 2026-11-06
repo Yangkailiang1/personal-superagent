@@ -68,7 +68,11 @@ export function Devices({
         <pre>{`npm ci --prefix executor && npm run build --prefix executor
 superagent-client happier-check
 superagent-client happier-repo --name 我的项目 --path /绝对路径/仓库 --write-path src --check "python -m pytest" --ack-cloud-transfer
-superagent-client happier-run`}</pre>
+superagent-client happier-run
+# Blender 工作 Agent
+superagent-client happier-check --live
+superagent-client blender-config --output ~/Documents/SuperagentOutputs --ack-model-context
+superagent-client blender-run`}</pre>
         <p>首次使用请先在本机完成 Claude 登录。只授权实际需要的路径和检查命令；撤销用 happier-revoke --name 我的项目。</p>
       </details>
       <div className="device-grid">

@@ -130,6 +130,7 @@ def task_data(task):
         data["attempt"] = {
             "id": str(attempt.pk),
             "executor": attempt.executor_kind,
+            "local_files": __import__("personal_superagent.modeling.services",fromlist=["files_for"]).files_for(attempt),
             "external": external_snapshot(attempt),
             "state": attempt.state,
             "mode": attempt.mode,

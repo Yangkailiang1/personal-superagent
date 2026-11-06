@@ -41,6 +41,12 @@ def enqueue(
         if existing.mode != mode:
             raise StateConflict("同一请求键不能切换执行模式。")
         return existing
+    if task.execution_agent_id and task.execution_agent.executor_kind == "blender":
+        from personal_superagent.modeling.services import enqueue as model_enqueue
+        return model_enqueue(task,request_key,mode,retry)
+    if task.release_id and task.dispatch.get("role")=="researcher" and mode=="real":
+        from personal_superagent.modeling.research import enqueue as research_enqueue
+        return research_enqueue(task,request_key,mode,retry)
     if task.execution_agent_id and task.execution_agent.executor_kind == "happier":
         from personal_superagent.happier.services import enqueue as external_enqueue
         return external_enqueue(task, request_key, mode, retry)

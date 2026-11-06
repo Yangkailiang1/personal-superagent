@@ -1,3 +1,4 @@
+import {LocalFiles} from "./LocalFiles";
 import { HappierRun } from "./HappierRun";
 import { useState } from "react";
 import {
@@ -46,7 +47,7 @@ export function TaskDetail({
       setBusy(false);
     }
   }
-  const external = attempt?.executor === "happier" || task.agent?.executor_kind === "happier";
+  const external = ["happier","blender"].includes(attempt?.executor || task.agent?.executor_kind || "");
   const canStart = task.state === "pending",
     canRetry =
       ["failed", "cancelled", "interrupted"].includes(task.state) &&
@@ -79,7 +80,8 @@ export function TaskDetail({
           {task.agent.device_id ? "本机设备回传（非独立验证）" : "云端"}
         </p>
       )}
-      {attempt?.external && <HappierRun run={attempt.external} onRefresh={onRefresh} onError={onError} />}
+      {attempt?.local_files && <LocalFiles files={attempt.local_files} onError={onError} />}
+      {attempt?.executor === "happier" && attempt.external && <HappierRun run={attempt.external} onRefresh={onRefresh} onError={onError} />}
       {task.routes?.map((route, i) => (
         <p className="data-notice" key={i}>
           路由：{route.reason || route.state}
@@ -179,7 +181,7 @@ export function TaskDetail({
           )}
           {task.state === "interrupted" &&
             attempt?.stopped &&
-            attempt.workflow_version && attempt.executor !== "happier" && (
+            attempt.workflow_version && !["happier","blender"].includes(attempt.executor || "") && (
               <button
                 disabled={busy}
                 onClick={() => action(prefix + "/resume/")}

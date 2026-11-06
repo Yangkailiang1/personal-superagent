@@ -24,7 +24,10 @@ def main() -> None:
     payload = json.loads(sys.stdin.buffer.readline())
     threading.Thread(target=watch_parent, daemon=True).start()
     try:
-        if payload["snapshot"].get("kind") in {"routing","knowledge","inspection"}:
+        if payload["snapshot"].get("kind")=="research_task":
+            from personal_superagent.modeling.research import run_research
+            emit("result",{"text":run_research(payload["snapshot"],emit)})
+        elif payload["snapshot"].get("kind") in {"routing","knowledge","inspection"}:
             from personal_superagent.collaboration.jobs import run_job
             emit("result", {"text":run_job(payload["snapshot"],payload["mode"],emit)})
         elif payload["snapshot"].get("kind") == "intake":

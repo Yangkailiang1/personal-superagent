@@ -47,6 +47,11 @@ def validate_step(user, step, policy):
     from personal_superagent.devices.models import Grant
     from personal_superagent.client.files import parts
 
+    if step.role == "modeler":
+        if step.required_capabilities != ["blender.modeling"] or set(step.tools)!={"blender_modeling"} or policy.mode!="real":
+            raise ValueError("建模步骤必须声明 Blender 能力和真实模式")
+        # 允许尚无在线设备时发布，调度器明确等待能力，不退回云端。
+        return
     if step.role == "coder":
         from personal_superagent.happier.services import eligible
         agent = get_object_or_404(AgentProfile, pk=step.agent_id, owner=user, enabled=True, executor_kind="happier")
@@ -99,6 +104,9 @@ def fits(agent, step, policy, online=True):
         or policy["mode"] not in agent.modes
     ):
         return False
+    if agent.executor_kind == "blender":
+        from personal_superagent.modeling.services import eligible
+        if not eligible(agent,step):return False
     if agent.executor_kind == "happier":
         from personal_superagent.happier.services import eligible
         if not eligible(agent, step):
@@ -192,6 +200,11 @@ def dispatch_pending():
             continue
         options = candidates(task)
         if not options:
+            continue
+        if len(options)==1 and options[0].executor_kind=="blender":
+            task.execution_agent=options[0];task.save(update_fields=["execution_agent"])
+            RouteDecision.objects.create(task=task,agent=options[0],state="selected",reason="唯一已授权且在线的 Blender 能力设备")
+            start_assigned(task)
             continue
         snapshot = {
             "max_calls": min(8, task.release.policy["max_model_calls"]),

@@ -3,6 +3,7 @@
  * 保留上游 start/load、可推送输入、权限 ID、session init、显式 result 与 abort 的生命周期。
  * 将其内部 query 换为固定版本 Anthropic SDK，移除 relay、语音及后台任务依赖。
  */
+import { loadProvider } from "../provider.js";
 import { query, type SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 import { PushableAsyncIterable } from "./PushableAsyncIterable.js";
 export type Emit = (event: Record<string, unknown>) => void;
@@ -51,23 +52,26 @@ export class HappierExecutor {
         throw Error("Cannot apply permission without canonical tool-use ID");
       return this.permission(id, tool, args);
     };
+    const provider=loadProvider();
+    if(input.provider_fingerprint && provider.fingerprint!==input.provider_fingerprint)throw Error('Local provider configuration changed');
     this.active = this.queryFactory({
       prompt: this.prompts,
       options: {
         cwd: input.cwd,
-        model: input.model || undefined,
+        model: input.model || provider.model || undefined,
         resume: input.resume || undefined,
         abortController: this.abortController,
         permissionMode: "default",
         settingSources: [],
-        mcpServers: {},
+        mcpServers: input.local_mcp || {},
         strictMcpConfig: true,
         plugins: [],
-        tools: ["Read", "Glob", "Grep", "Write", "Edit", "Bash"],
+        tools: input.blender ? [] : ["Read", "Glob", "Grep", "Write", "Edit", "Bash"],
         maxTurns: input.max_turns,
         persistSession: true,
         env: {
           ...process.env,
+          ...provider.env,
           CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1",
           CLAUDE_CODE_DISABLE_AUTO_MEMORY: "1",
           GIT_CONFIG_COUNT: "3",

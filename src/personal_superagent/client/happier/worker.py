@@ -23,6 +23,10 @@ def check(root):
         raise ValueError(
             "先运行 npm ci --prefix executor && npm run build --prefix executor"
         )
+    from .provider import info
+    provider = info(EXECUTOR)
+    if provider['configured']:
+        return True
     try:
         result = subprocess.run(
             ["claude", "auth", "status"], capture_output=True, timeout=15

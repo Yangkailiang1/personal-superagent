@@ -1,6 +1,7 @@
 from django.contrib.auth import views as auth_views
 from django.urls import include, path
 from . import dashboard, board
+from personal_superagent.modeling.views import open_file
 from personal_superagent.happier.views import endpoint as happier_endpoint
 from personal_superagent.collaboration import views as collaboration_views, assets
 from personal_superagent.intake import views as intake_views
@@ -12,6 +13,7 @@ urlpatterns = [
     path("api/device/<str:action>/", device_views.endpoint),
     path("api/intake/<str:action>/", intake_views.endpoint),
     path("api/dashboard/", board.dashboard),
+    path("api/local-files/open/",open_file),
     path("api/happier/<str:action>/", happier_endpoint),
     path("api/collaboration/<str:action>/",collaboration_views.endpoint),
     path("api/images/<int:id>/",assets.image),

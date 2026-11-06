@@ -40,13 +40,25 @@ def main():
     repo.add_argument("--ack-cloud-transfer", action="store_true", required=True)
     remove = sub.add_parser("happier-revoke")
     remove.add_argument("--name", required=True)
-    sub.add_parser("happier-check")
+    sub.add_parser("happier-check").add_argument("--live", action="store_true")
     happier = sub.add_parser("happier-run")
     happier.add_argument("--once", action="store_true")
+    blender=sub.add_parser("blender-config")
+    blender.add_argument("--output",required=True)
+    blender.add_argument("--ack-model-context",action="store_true",required=True)
+    sub.add_parser("blender-check")
+    blender_run=sub.add_parser("blender-run");blender_run.add_argument("--once",action="store_true")
     args = parser.parse_args()
     try:
         root = directory(args.config_dir)
-        if args.action.startswith("happier-"):
+        if args.action.startswith("blender-"):
+            from .blender import runtime
+            if args.action=="blender-config":
+                runtime.register(root,args.output);print("Blender 专用输出目录和能力授权已保存；未上传目录路径。")
+            elif args.action=="blender-check":
+                print("Blender 可执行文件：",runtime.BLENDER.is_file(),"已装 addon：",runtime.ADDON.is_file())
+            else:runtime.run(root,once=args.once)
+        elif args.action.startswith("happier-"):
             from .happier import repositories, worker
 
             if args.action == "happier-repo":
@@ -61,6 +73,12 @@ def main():
                 )
                 print("已撤销本机仓库授权；运行客户端同步云端。")
             elif args.action == "happier-check":
+                if args.live:
+                    from .happier.provider import verify
+                    config=verify(worker.EXECUTOR)
+                    (root/'provider-check.json').write_text(__import__('json').dumps(config))
+                    print("真实模型与工具调用验证通过，配置指纹已保存。")
+                    return
                 worker.check(root)
                 print("Claude 登录与执行依赖可用；未调用模型，工具链路仍需实际验收。")
             else:

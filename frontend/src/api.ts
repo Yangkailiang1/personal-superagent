@@ -112,6 +112,7 @@ export type Task = TaskSummary & {
     workflow_version: string;
     executor?: string;
     external?: any;
+    local_files?: any[];
     execution_device_id?: string | null;
     scope?: { device_id: string; device_name?: string; label: string } | null;
     started_at: string | null;

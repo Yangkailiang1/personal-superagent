@@ -227,6 +227,7 @@ export function MainChat({
                   }}><option value="">保留当前角色</option>{repositories.filter(r=>r.agent__enabled).map(r=><option key={r.id} value={r.id}>{r.label} · {r.baseline.slice(0,8)}</option>)}</select>
                 </label>}
                 {step.repository_id && <p className="data-notice">Claude · 基线 {step.base_commit.slice(0,12)} · 最多 {repositories.find(r=>r.id===step.repository_id)?.policy.max_turns ?? "待核查"} 轮 · 写入 {step.write_paths.join("、")} · 检查 {step.checks.join("；") || "未配置，不能视为测试通过"}。低风险及预授权命令自动执行，其余逐项审批；本机非安全沙箱。</p>}
+                {step.role==="modeler" && <p className="data-notice">Blender 任务按能力派给在线设备，文件只留本机，云端不接收模型或预览。</p>}
                 <p>交付：{step.deliverables.join("；")}</p>
                 <p>验收：{step.acceptance.join("；")}</p>
                 <small>
@@ -298,7 +299,7 @@ export function MainChat({
                 />
               </label>
             </div>
-            {c.draft.steps.some((s:any)=>s.role==="coder") && <p className="data-notice">代码任务将调用本机真实 Claude，可能产生模型费用。主对话的“离线演示”不适用于代码执行；点击发布即授权本计划的真实执行。</p>}
+            {c.draft.steps.some((s:any)=>["coder","modeler"].includes(s.role)) && <p className="data-notice">代码任务将调用本机真实 Claude，可能产生模型费用。主对话的“离线演示”不适用于代码执行；点击发布即授权本计划的真实执行。</p>}
             <button
               className="primary"
               disabled={
@@ -315,7 +316,7 @@ export function MainChat({
                   request_key: crypto.randomUUID(),
                   accept_assumptions: accept,
                   policy: {
-                    mode: c.draft.steps.every((s:any)=>s.role==="coder") ? "real" : mode,
+                    mode: c.draft.steps.every((s:any)=>["coder","modeler"].includes(s.role)) ? "real" : mode,
                     max_model_calls: calls,
                     max_images: images,
                     timeout: 1800,

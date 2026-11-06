@@ -20,7 +20,8 @@ class Step(BaseModel):
     key: str = Field(pattern=r"^[a-z][a-z0-9_-]{0,31}$")
     title: str = Field(min_length=1, max_length=120)
     goal: str = Field(min_length=1, max_length=2500)
-    role: Literal["writer", "reviewer", "researcher", "image_designer", "coder"] = "writer"
+    role: Literal["writer", "reviewer", "researcher", "image_designer", "coder", "modeler"] = "writer"
+    required_capabilities: list[Literal["blender.modeling"]] = Field(default_factory=list,max_length=1)
     repository_id: str = ""
     repository_version: int = 0
     base_commit: str = ""

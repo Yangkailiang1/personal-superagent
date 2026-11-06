@@ -1,6 +1,6 @@
 [project]
 name = "personal-superagent"
-version = "0.7.0"
+version = "0.8.0"
 description = "个人多 Agent 工作台：逐课实现"
 requires-python = ">=3.12,<3.13"
 dependencies = [

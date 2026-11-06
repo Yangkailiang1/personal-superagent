@@ -6,7 +6,9 @@ const emit = (v: Record<string, unknown>) =>
   process.stdout.write(JSON.stringify({ protocol: 1, ...v }) + "\n");
 const broker = new PermissionBroker(emit);
 let policy: Policy;
+let modeling=false;
 const executor = new HappierExecutor(emit, async (id, tool, args) => {
+  if(modeling)return ["mcp__blender__build_model","mcp__blender__inspect_model","mcp__blender__render_model"].includes(tool);
   const verdict = classify(tool, args, policy);
   if (verdict !== "ask") return verdict === "allow";
   return broker.request(id, tool, args);
@@ -19,6 +21,7 @@ lines.on("line", (line) => {
     if (msg.protocol !== 1) throw Error("Protocol mismatch");
     if (msg.action === "start" && !running) {
       running = true;
+      modeling = msg.blender === true;
       policy = {
         cwd: msg.cwd,
         write_paths: msg.write_paths,

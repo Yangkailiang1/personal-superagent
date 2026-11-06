@@ -92,9 +92,17 @@ class CheckResult(BaseModel):
     output: str = Field(default="", max_length=20000)
 
 
+class FileTrace(BaseModel):
+    model_config=ConfigDict(extra="forbid")
+    path:str=Field(max_length=200)
+    media_type:str=Field(max_length=100)
+    size:int=Field(gt=0,le=104857600)
+    sha256:str=Field(pattern="^[0-9a-f]{64}$")
+
 class Delivery(BaseModel):
     # 模型 usage 的字段由供应商定义；仅展示，不宣称精确控制账户账单。
     model_config = ConfigDict(extra="forbid")
+    local_files:list[FileTrace]=Field(default_factory=list,max_length=8)
     state: str = Field(pattern=r"^(succeeded|failed|cancelled|interrupted)$")
     text: str = Field(default="", max_length=100000)
     error: str = Field(default="", max_length=1000)

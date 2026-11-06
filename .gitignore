@@ -15,3 +15,9 @@ dist/
 .runtime/
 .ruff_cache/
 node_modules/
+.local-notes/
+docs/lessons/
+docs/releases/
+docs/00-overview.md
+docs/01-roadmap.md
+docs/decisions.md

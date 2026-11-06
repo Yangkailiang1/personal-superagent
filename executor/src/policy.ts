@@ -18,7 +18,10 @@ export function safePath(
 ): boolean {
   if (typeof value !== "string" || !value || value.includes("\0")) return false;
   if (value.split(/[\\/]/).includes("..")) return false;
-  const target = resolve(cwd, value),
+  const configuredRoot = resolve(cwd);
+  cwd = realpathSync(cwd);
+  const pathValue = isAbsolute(value) && (value === configuredRoot || value.startsWith(configuredRoot + sep)) ? relative(configuredRoot,value) : value;
+  const target = resolve(cwd, pathValue),
     rel = relative(cwd, target);
   if (isAbsolute(rel) || rel === ".." || rel.startsWith(".." + sep))
     return false;

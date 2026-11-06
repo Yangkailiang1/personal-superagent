@@ -76,6 +76,9 @@ def hello(device, data):
 
 
 def eligible(agent, step):
+    if agent.executor_kind=="blender":
+        from personal_superagent.modeling.services import eligible as model_eligible
+        return model_eligible(agent,step)
     repo = Repository.objects.filter(
         agent=agent, enabled=True, device__revoked_at=None
     ).first()
@@ -197,7 +200,7 @@ def control(device, data):
         pk=data["id"],
         execution_device=device,
         task__owner=device.owner,
-        executor_kind="happier",
+        executor_kind__in=["happier","blender"],
     )
     Task.objects.select_for_update().get(pk=original.task_id)
     a = Attempt.objects.select_for_update().get(pk=original.pk)
@@ -236,7 +239,10 @@ def control(device, data):
     if action == "result":
         report = Delivery.model_validate(data["report"]).model_dump()
         report["independent_verification"] = False
-        digest = hashlib.sha256(json.dumps(report, sort_keys=True).encode()).hexdigest()
+        if a.executor_kind=="blender" and (report['files'] or report['diff']):raise ValueError('建模文件内容不能上传云端')
+        canonical=dict(report)
+        if 'local_files' not in data['report']:canonical.pop('local_files',None)
+        digest = hashlib.sha256(json.dumps(canonical, sort_keys=True).encode()).hexdigest()
         if run.receipt_digest:
             if run.receipt_digest != digest:
                 raise StateConflict("重复结果不能覆盖")
@@ -284,6 +290,8 @@ def control(device, data):
                 )
             a.process_stopped = True
             a.save(update_fields=["process_stopped"])
+        from personal_superagent.modeling.services import track
+        track(a,report['local_files'])
         run.report = report
         run.receipt_digest = digest
         run.save(update_fields=["report", "receipt_digest"])
@@ -387,14 +395,14 @@ def decide(user, data):
 
 
 def snapshot(attempt):
-    if attempt.executor_kind != "happier":
+    if attempt.executor_kind not in {"happier","blender"}:
         return None
     run = attempt.external_run
     return {
         "instance": str(run.instance),
         "session_id": run.session_id,
-        "repository_id": attempt.input_snapshot["repository_id"],
-        "baseline": attempt.input_snapshot["base_commit"],
+        "repository_id": attempt.input_snapshot.get("repository_id"),
+        "baseline": attempt.input_snapshot.get("base_commit",""),
         "policy": attempt.input_snapshot["policy"],
         "report": run.report,
         "can_decide": bool(

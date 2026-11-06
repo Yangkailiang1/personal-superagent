@@ -19,7 +19,7 @@ def endpoint(request, action):
     """仅设备 Bearer 身份，不接受浏览器 Session；不为 Cookie 接口关闭 CSRF。"""
     try:
         if len(request.body) > (
-            15 * 1024 * 1024 if action in {"agent-control", "happier-control"} else 160000
+            15 * 1024 * 1024 if action in {"agent-control", "happier-control", "modeling-control"} else 160000
         ):
             raise ValueError("请求超过大小限制")
         data = json.loads(request.body)
@@ -38,6 +38,15 @@ def endpoint(request, action):
         device = authenticate(request)
         if device is None:
             return JsonResponse({"error": "设备凭证无效或已撤销"}, status=401)
+        if action.startswith("modeling-"):
+            from personal_superagent.modeling import services
+            if action=="modeling-hello":return JsonResponse(services.hello(device,data))
+            if action=="modeling-claim":return JsonResponse(services.claim(device))
+            if action=="modeling-files":return JsonResponse(services.file_poll(device,data))
+            if action=="modeling-control":
+                from personal_superagent.happier.services import control
+                return JsonResponse(control(device,data))
+            raise ValueError("未知建模接口")
         if action.startswith("happier-"):
             from personal_superagent.happier import services
             handler = {"happier-hello": services.hello, "happier-claim": lambda d, _: services.claim(d), "happier-control": services.control}.get(action)

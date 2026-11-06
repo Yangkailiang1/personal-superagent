@@ -58,7 +58,7 @@ def resume(*, user, task_id, attempt_id):
         return attempt
     if attempt.state != "interrupted" or not attempt.process_stopped or attempt.cancel_requested_at:
         raise StateConflict("只可恢复已确认停止、未取消的中断执行")
-    if attempt.executor_kind == "happier":
+    if attempt.executor_kind in {"happier", "blender"}:
         raise StateConflict("Claude 中断结果需先核实，本版请新建重试，不透明重放会话")
     if attempt.execution_device_id:
         # 用户显式恢复；由原设备读取原 checkpoint，缺失/不兼容会失败，绝不从头执行。
