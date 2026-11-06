@@ -67,11 +67,14 @@ export class HappierExecutor {
         strictMcpConfig: true,
         plugins: [],
         tools: input.blender ? [] : ["Read", "Glob", "Grep", "Write", "Edit", "Bash"],
+        // 建模通过结构化 MCP 完成，不让收尾回复消耗默认的大量扩展思考额度。
+        thinking: input.blender ? { type: "disabled" } : undefined,
         maxTurns: input.max_turns,
         persistSession: true,
         env: {
           ...process.env,
           ...provider.env,
+          ...(input.blender ? { CLAUDE_CODE_MAX_OUTPUT_TOKENS: "8192" } : {}),
           CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1",
           CLAUDE_CODE_DISABLE_AUTO_MEMORY: "1",
           GIT_CONFIG_COUNT: "3",

@@ -127,3 +127,20 @@ test("approval cache binds canonical request to immutable arguments", async () =
   broker.cancel();
   assert.equal(await second, false);
 });
+
+test("Blender uses bounded output and disabled extended thinking without broadening tools", async () => {
+  let options: any;
+  const factory = ((input: any) => {
+    options = input.options;
+    return (async function* () {
+      yield { type: "result", subtype: "success", is_error: false, result: "recorded", usage: {}, total_cost_usd: 0 };
+    })();
+  }) as any;
+  const executor = new HappierExecutor(() => {}, async () => false, factory);
+  await executor.start({ cwd, blender: true, prompt: "test-only", max_turns: 3 });
+  assert.deepEqual(options.thinking, { type: "disabled" });
+  assert.equal(options.env.CLAUDE_CODE_MAX_OUTPUT_TOKENS, "8192");
+  assert.deepEqual(options.tools, []);
+  assert.deepEqual(options.settingSources, []);
+  assert.equal(options.strictMcpConfig, true);
+});
