@@ -29,6 +29,8 @@ def append_event(attempt: Attempt, kind: str, data: dict) -> None:
 def enqueue(*, user, task_id, request_key: UUID, mode: str, retry: bool = False) -> Attempt:
     get_task(user=user, task_id=task_id)
     task = Task.objects.select_for_update().get(pk=task_id, owner=user)
+    if task.kind != "task":
+        raise StateConflict("接待调用只能从需求会话启动。")
     existing = task.attempts.filter(request_key=request_key).first()
     if existing:
         if existing.mode != mode:
@@ -39,6 +41,9 @@ def enqueue(*, user, task_id, request_key: UUID, mode: str, retry: bool = False)
     from django.conf import settings
     if mode == "real" and not settings.ALLOW_REAL_MODE:
         raise StateConflict("此部署只启用离线演示，真实模型尚未开放。")
+    if mode == "real":
+        from personal_superagent.model_status import status
+        if status()["state"] != "ready": raise StateConflict("请先显式验证真实模型的工具调用能力。")
     if task.attempts.filter(process_stopped=False).exists() or task.attempts.filter(state__in=ACTIVE).exists():
         raise StateConflict("任务仍有活动执行，或旧进程尚未确认停止。")
     if retry and task.status not in {"failed", "cancelled", "interrupted"}:
@@ -86,7 +91,10 @@ def finish_locked(attempt: Attempt, state: str, *, result: str = "", error: str 
     attempt.finished_at = None if state in {"waiting_approval", "waiting_device"} else timezone.now()
     attempt.save(update_fields=["state", "result", "error", "activity", "finished_at"])
     Task.objects.filter(pk=attempt.task_id).update(status=state)
-    append_event(attempt, "finished", {"state": state, "error": error})
+    if attempt.input_snapshot.get("kind") == "intake":
+        from personal_superagent.intake.services import project_result
+        project_result(attempt)
+    append_event(attempt, "finished", {"state": attempt.state, "error": attempt.error})
 
 
 @transaction.atomic
@@ -101,7 +109,9 @@ def record_event(attempt_id, token, kind: str, data: dict) -> bool:
     append_event(attempt, kind, data)
     from .projections import update_activity_locked
     update_activity_locked(attempt, kind, data)
-    attempt.activity = {"model": "模型正在处理", "tool_start": "正在调用工具", "tool_end": "工具已返回"}.get(kind, attempt.activity)
+    role = {"supervisor": "主助手", "writer": "内容整理", "reviewer": "质量检查", "intake": "需求接待"}.get(data.get("role"), "助手")
+    activity = {"model": f"{role}正在处理", "plan": "计划已更新", "subagent_start": f"已委派：{role}", "subagent_end": f"{role}已返回", "tool_start": "正在调用工具：" + str(data.get("name", "")), "tool_end": "工具已返回：" + str(data.get("name", ""))}
+    attempt.activity = activity.get(kind, attempt.activity)
     attempt.save(update_fields=["activity"])
     return True
 

@@ -80,6 +80,14 @@ export type TaskSummary = {
   created_at: string;
 };
 export type Task = TaskSummary & {
+  source?: { conversation_id: string; version: number; draft: unknown } | null;
+  attempts?: {
+    id: string;
+    state: string;
+    mode: string;
+    error: string;
+    created_at: string;
+  }[];
   description: string;
   grant_id: string | null;
   attempt?: {

@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     "personal_superagent.tasks",     # 本项目核心任务模块
     "personal_superagent.execution",
     "personal_superagent.devices",
+    "personal_superagent.intake",
 ]
 
 # 中间件栈，按请求处理顺序排列。

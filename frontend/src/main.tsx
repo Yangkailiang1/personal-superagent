@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import { api, csrf, states, type Bootstrap, type Task } from "./api";
 import { TaskComposer } from "./Chat";
+import { Board } from "./Board";
+import { Intake } from "./Intake";
 import { Devices } from "./Devices";
 import { TaskDetail } from "./TaskDetail";
 import "./style.css";
@@ -25,7 +27,14 @@ function App() {
     devices: [],
     real_enabled: false,
   });
-  const [view, setView] = useState("home"),
+  const [intakeId, setIntakeId] = useState(
+    new URLSearchParams(location.search).get("intake") || "",
+  );
+  const [view, setView] = useState(
+      new URLSearchParams(location.search).has("intake")
+        ? "intake"
+        : new URLSearchParams(location.search).get("view") || "board",
+    ),
     [selected, setSelected] = useState(
       new URLSearchParams(location.search).get("task") || "",
     ),
@@ -106,7 +115,7 @@ function App() {
           <span className="brand-icon">
             <Sparkle size={19} />
           </span>
-          superagent<span className="version">0.4</span>
+          superagent<span className="version">0.5</span>
         </a>
         <button
           className="new-task"
@@ -122,7 +131,9 @@ function App() {
         </button>
         <nav>
           {[
-            ["home", "工作台", LayoutGrid],
+            ["board", "任务看板", LayoutGrid],
+            ["intake", "需求对话", Layers],
+            ["home", "快速创建", Plus],
             ["queue", "任务队列", Layers],
             ["devices", "设备与授权", Laptop],
           ].map(([key, label, Icon]) => {
@@ -133,6 +144,9 @@ function App() {
                 className={view === key ? "nav-active" : ""}
                 onClick={() => {
                   setView(key as string);
+                  setSelected("");
+                  setTask(null);
+                  history.replaceState(null, "", `/app/?view=${key}`);
                   if (window.innerWidth <= 650) setSide(false);
                 }}
               >
@@ -190,18 +204,22 @@ function App() {
             {side ? <PanelLeftClose size={17} /> : <PanelLeftOpen size={17} />}
           </button>
           <span>
-            {view === "devices"
-              ? "设备与授权"
-              : view === "queue"
-                ? "任务队列"
-                : "个人工作台"}
+            {view === "board"
+              ? "任务看板"
+              : view === "intake"
+                ? "需求对话"
+                : view === "devices"
+                  ? "设备与授权"
+                  : view === "queue"
+                    ? "任务队列"
+                    : "个人工作台"}
           </span>
           <div className="topbar-right">
             <span className="environment">
               <i className={connected ? "dot online" : "dot"} />
               {connected ? "云端已连接" : "等待同步"}
             </span>
-            <a href="/" title="保留的简易界面">
+            <a href="/" title="返回首页">
               <ArrowUpRight size={16} />
             </a>
           </div>
@@ -211,6 +229,19 @@ function App() {
             {error}
             <button onClick={() => setError("")}>×</button>
           </div>
+        )}
+        {view === "board" && (
+          <Board
+            onTask={choose}
+            onDraft={(id) => {
+              setIntakeId(id);
+              setView("intake");
+              history.replaceState(null, "", `/app/?intake=${id}`);
+            }}
+          />
+        )}
+        {view === "intake" && (
+          <Intake initialId={intakeId} onTask={choose} devices={data.devices} />
         )}
         {view === "home" && (
           <section className="home">

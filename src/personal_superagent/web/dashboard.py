@@ -19,10 +19,11 @@ from django.db import transaction
 
 from personal_superagent.tasks.forms import TaskForm
 from personal_superagent.tasks.models import Task
-from personal_superagent.tasks.services import create_task, get_task
+from personal_superagent.tasks.services import create_task
 from personal_superagent.devices.auth import new_pairing
 from personal_superagent.devices.models import Device, Grant
 from personal_superagent.execution.lifecycle import StateConflict
+from personal_superagent.model_status import status as model_status
 
 DIST = Path(__file__).resolve().parents[3] / "frontend" / "dist"
 
@@ -94,7 +95,12 @@ def task_data(task):
         "state": task.status,
         "created_at": task.created_at,
         "grant_id": str(task.local_grant_id) if task.local_grant_id else None,
+        "source": None,
     }
+    from personal_superagent.intake.models import Confirmation
+    source = Confirmation.objects.filter(task=task).first()
+    if source: data["source"] = {"conversation_id": str(source.conversation_id), "version": source.version, "draft": source.draft, "message_ids": source.source_turn_ids}
+    data["attempts"] = list(task.attempts.order_by("-created_at").values("id", "state", "mode", "error", "created_at"))
     if attempt:
         data["attempt"] = {
             "id": str(attempt.pk),
@@ -173,7 +179,7 @@ def api(request, action):
             return JsonResponse(
                 {
                     "user": request.user.username,
-                    "real_enabled": settings.ALLOW_REAL_MODE,
+                    "real_enabled": settings.ALLOW_REAL_MODE and model_status()["state"] == "ready",
                     "tasks": [
                         {
                             "id": str(t.pk),
@@ -181,14 +187,14 @@ def api(request, action):
                             "state": t.status,
                             "created_at": t.created_at,
                         }
-                        for t in Task.objects.filter(owner=request.user)[:100]
+                        for t in Task.objects.filter(owner=request.user, kind="task")[:100]
                     ],
                     "devices": devices,
                 }
             )
         if action == "task" and request.method == "GET":
             return JsonResponse(
-                task_data(get_task(user=request.user, task_id=UUID(request.GET["id"])))
+                task_data(get_object_or_404(Task, owner=request.user, kind="task", pk=UUID(request.GET["id"])))
             )
         if action == "create" and request.method == "POST":
             if not isinstance(data.get("text"), str):

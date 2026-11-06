@@ -46,6 +46,7 @@ class Task(models.Model):
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
     # 任务标题，限制 120 字符，数据库层和表单层都会校验。
+    kind = models.CharField(max_length=16, default="task", choices=[("task", "业务任务"), ("intake", "接待调用")])
     title = models.CharField(max_length=120)
 
     # 任务详细描述。TextField 在 PostgreSQL 中对应 text 类型，理论上不限长，

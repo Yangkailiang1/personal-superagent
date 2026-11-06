@@ -2,11 +2,11 @@
 
 面向个人用户：网页登录并管理任务，云端 Agent 负责规划与协作，用户自己的电脑执行明确授权的本地工具。按版本逐步交付，旧项目保持原样。
 
-**当前版本 V0.4：本地客户端与授权工具**。云端规划和多 Agent 协作，本机主动连接执行授权目录内的文本工具；支持设备绑定、撤销、离线等待、审批和防重放账本。新增 React + assistant-ui 黑白灰工作台，服务器仍仅供本人经 SSH 隧道验证。
+**当前版本 V0.5：需求对话与任务看板**。接待 Agent 整理草稿，用户确认后生成待启动任务，后台 Agent 执行并通过六列 Dashboard 展示真实阶段；保留本地工具、审批和历史恢复。真实模型支持独立安全配置与显式工具验证，未配置时仅演示，服务器仍供本人通过 SSH 隧道使用。
 
 ## 从这里开始
 
-先看 [V0.4 架构说明](docs/releases/v0.4/architecture.md) 或 [完整启动手册](docs/releases/v0.4/operations.md)。首次本地运行：
+先看 [V0.5 架构说明](docs/releases/v0.5/architecture.md) 或 [完整启动手册](docs/releases/v0.5/operations.md)。首次本地运行：
 
 ```bash
 cd /Users/yangkailiang/Documents/DeepAgents/personal-superagent
@@ -58,4 +58,4 @@ uv run --locked pytest -q
 - [版本文档：架构、实现、验证、运行与架构问答](docs/releases/README.md)
 - [第一课](docs/lessons/01-single-agent.md) / [第二课](docs/lessons/02-django-tasks.md)（历史教学参考）
 
-设备接入与目录授权命令见 [V0.4 运行手册](docs/releases/v0.4/operations.md)，结果与限制见 [验证报告](docs/releases/v0.4/verification.md)。写入仅新建且需审批；结果未知不自动重放。未开放任意 Shell、公开注册或独立前台需求访谈 Agent。
+模型配置、需求对话及看板使用见 [V0.5 运行手册](docs/releases/v0.5/operations.md)，实际结果与未验证项见 [验证报告](docs/releases/v0.5/verification.md)。设备接入沿用 [V0.4 手册](docs/releases/v0.4/operations.md)。未知本地操作不重放，写入仍需审批；未开放公开注册或任意 Shell。

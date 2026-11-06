@@ -210,7 +210,8 @@ class PostgresExecutionTests(TransactionTestCase):
         self.assertLess(max(first.started_at, second.started_at), min(first.finished_at, second.finished_at))
 
     def test_real_mode_config_failure_is_not_demo(self):
-        attempt = self.queued("real")
+        with patch("personal_superagent.model_status.status", return_value={"state": "ready"}):
+            attempt = self.queued("real")
         worker = self.command("--once", env={"MODEL_API_KEY": "", "MODEL_NAME": ""})
         _, error = worker.communicate(timeout=40)
         self.assertEqual(worker.returncode, 0, error.decode())

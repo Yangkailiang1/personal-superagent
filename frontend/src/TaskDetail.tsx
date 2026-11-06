@@ -13,6 +13,7 @@ import {
   Laptop,
 } from "lucide-react";
 import { api, states, toolNames, type Task } from "./api";
+import { History } from "./History";
 import { Conversation, Markdown } from "./Chat";
 
 export function TaskDetail({
@@ -64,12 +65,14 @@ export function TaskDetail({
           {states[task.state]}
         </span>
       </header>
+      {tab === "history" && <History task={task} />}
       <div className="task-toolbar">
         <div className="tabs">
           {[
             ["conversation", "对话"],
             ["process", "执行过程"],
             ["artifacts", "交付物"],
+            ["history", "来源与历史"],
           ].map(([key, label]) => (
             <button
               className={tab === key ? "selected" : ""}
