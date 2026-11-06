@@ -1,3 +1,4 @@
+import { HappierRun } from "./HappierRun";
 import { useState } from "react";
 import {
   Play,
@@ -45,6 +46,7 @@ export function TaskDetail({
       setBusy(false);
     }
   }
+  const external = attempt?.executor === "happier" || task.agent?.executor_kind === "happier";
   const canStart = task.state === "pending",
     canRetry =
       ["failed", "cancelled", "interrupted"].includes(task.state) &&
@@ -77,6 +79,7 @@ export function TaskDetail({
           {task.agent.device_id ? "本机设备回传（非独立验证）" : "云端"}
         </p>
       )}
+      {attempt?.external && <HappierRun run={attempt.external} onRefresh={onRefresh} onError={onError} />}
       {task.routes?.map((route, i) => (
         <p className="data-notice" key={i}>
           路由：{route.reason || route.state}
@@ -150,19 +153,20 @@ export function TaskDetail({
           {(canStart || canRetry) && (
             <>
               <select
-                value={mode}
+                value={external ? "real" : mode}
+                disabled={external}
                 onChange={(e) => setMode(e.target.value)}
                 aria-label="执行模式"
               >
-                <option value="demo">离线演示</option>
-                {realEnabled && <option value="real">真实模型</option>}
+                {!external && <option value="demo">离线演示</option>}
+                {(realEnabled || external) && <option value="real">真实模型</option>}
               </select>
               <button
                 className="primary"
                 disabled={busy}
                 onClick={() =>
                   action(`/tasks/${task.id}/start/`, {
-                    mode,
+                    mode: external ? "real" : mode,
                     request_key: crypto.randomUUID(),
                     action: canRetry ? "retry" : "start",
                   })
@@ -175,7 +179,7 @@ export function TaskDetail({
           )}
           {task.state === "interrupted" &&
             attempt?.stopped &&
-            attempt.workflow_version && (
+            attempt.workflow_version && attempt.executor !== "happier" && (
               <button
                 disabled={busy}
                 onClick={() => action(prefix + "/resume/")}

@@ -47,6 +47,12 @@ def validate_step(user, step, policy):
     from personal_superagent.devices.models import Grant
     from personal_superagent.client.files import parts
 
+    if step.role == "coder":
+        from personal_superagent.happier.services import eligible
+        agent = get_object_or_404(AgentProfile, pk=step.agent_id, owner=user, enabled=True, executor_kind="happier")
+        if policy.mode != "real" or not step.write_paths or not eligible(agent, step.model_dump()) or not set(step.tools) <= set(agent.tools):
+            raise ValueError("Claude 任务必须明确本机 Agent、仓库版本、写入范围及真实模式")
+        return
     parts(step.source_path)
     if any(t.startswith("local_") for t in step.tools) and not step.grant_id:
         raise ValueError("本地文件任务必须明确授权目录")
@@ -93,6 +99,10 @@ def fits(agent, step, policy, online=True):
         or policy["mode"] not in agent.modes
     ):
         return False
+    if agent.executor_kind == "happier":
+        from personal_superagent.happier.services import eligible
+        if not eligible(agent, step):
+            return False
     if step.get("grant_id") and str(agent.grant_id) != step["grant_id"]:
         return False
     if agent.device_id:
@@ -160,6 +170,14 @@ def dispatch_pending():
             continue
         if task.routes.filter(state="failed").exists():
             continue  # 失败需用户显式处理，不自动无限重试
+        # 用户已选定具体执行器时无需再调用路由模型；仍重新验证在线和资源。
+        if not task.execution_agent_id and task.dispatch.get("agent_id"):
+            selected = AgentProfile.objects.filter(pk=task.dispatch["agent_id"], owner=task.owner, enabled=True).first()
+            if not selected or not fits(selected, task.dispatch, task.release.policy):
+                continue
+            task.execution_agent = selected
+            task.save(update_fields=["execution_agent"])
+            RouteDecision.objects.create(task=task,agent=selected,state="selected",reason="用户明确指定；服务端验证仓库、设备和授权")
         if task.execution_agent_id:
             if not fits(task.execution_agent, task.dispatch, task.release.policy):
                 continue

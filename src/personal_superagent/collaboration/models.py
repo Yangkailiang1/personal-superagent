@@ -18,6 +18,7 @@ class Question(models.Model):
 
 
 class AgentProfile(models.Model):
+    executor_kind = models.CharField(max_length=20, default="deepagents")
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     identity_key = models.CharField(max_length=160)

@@ -42,6 +42,7 @@ def endpoint(request, action):
                             "modes",
                             "enabled",
                             "last_seen",
+                            "executor_kind",
                         )
                     )
                 }

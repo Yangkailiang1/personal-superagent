@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     "personal_superagent.devices",
     "personal_superagent.intake",
     "personal_superagent.collaboration",
+    "personal_superagent.happier",
 ]
 
 # 中间件栈，按请求处理顺序排列。

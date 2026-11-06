@@ -41,6 +41,9 @@ def enqueue(
         if existing.mode != mode:
             raise StateConflict("同一请求键不能切换执行模式。")
         return existing
+    if task.execution_agent_id and task.execution_agent.executor_kind == "happier":
+        from personal_superagent.happier.services import enqueue as external_enqueue
+        return external_enqueue(task, request_key, mode, retry)
     if mode not in {"demo", "real"}:
         raise StateConflict("执行模式必须为 demo 或 real。")
     from django.conf import settings
@@ -160,7 +163,7 @@ def request_cancel(*, user, task_id, attempt_id) -> Attempt:
         return attempt
     attempt.cancel_requested_at = timezone.now()
     attempt.save(update_fields=["cancel_requested_at"])
-    if attempt.state in {"queued", "waiting_approval", "waiting_device"}:
+    if attempt.state in {"queued", "waiting_approval", "waiting_device"} and attempt.process_stopped:
         attempt.approvals.filter(decision="pending").update(
             decision="cancelled", version=models.F("version") + 1
         )

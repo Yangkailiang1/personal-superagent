@@ -1,0 +1,22 @@
+{
+  "repository": "https://github.com/happier-dev/happier",
+  "commit": "47de280241d02d8b338b4e62f39983679716b044",
+  "files": [
+    {
+      "path": "apps/cli/src/backends/claude/sdkAgentBackend/ClaudeSdkAgentBackend.ts",
+      "sha256": "24f5e059694f06289d39d56b3eb0a27a689ea7bc6e15da354631660cc8d80872"
+    },
+    {
+      "path": "apps/cli/src/backends/claude/claudeExplicitRunnerStop.ts",
+      "sha256": "be31e2b0629599eea51855a2b1c1238b465feafe612d30bd348f915813950300"
+    },
+    {
+      "path": "apps/cli/src/utils/PushableAsyncIterable.ts",
+      "sha256": "0fc90d81df32b5895ca1bb01abb9bf78d2a46c12f21685a3383dfb027897a1d4"
+    },
+    {
+      "path": "LICENCE",
+      "sha256": "e251d0448ef3ce023c20ebac9b90a7d8642b1434825838247d6e457668eb3e00"
+    }
+  ]
+}

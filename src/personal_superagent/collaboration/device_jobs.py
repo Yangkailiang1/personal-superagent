@@ -97,7 +97,7 @@ def hello(device, data):
                 },
             )
             seen.append(agent.pk)
-        AgentProfile.objects.filter(device=device).exclude(pk__in=seen).update(
+        AgentProfile.objects.filter(device=device, executor_kind="deepagents").exclude(pk__in=seen).update(
             enabled=False
         )
     return {"profiles": len(seen)}

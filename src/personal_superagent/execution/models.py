@@ -8,6 +8,7 @@ from personal_superagent.tasks.models import Task
 
 
 class Attempt(models.Model):
+    executor_kind = models.CharField(max_length=20, default="deepagents")
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="attempts")
     execution_device = models.ForeignKey("devices.Device", null=True, on_delete=models.SET_NULL)

@@ -63,6 +63,14 @@ export function Devices({
           </button>
         </div>
       )}
+      <details className="draft-panel"><summary>连接本机 Claude 代码 Agent</summary>
+        <p>先绑定设备，再在本机登记真实 Git 仓库。每个任务使用独立 worktree，保留原目录修改。无需 Happier 账号或服务。</p>
+        <pre>{`npm ci --prefix executor && npm run build --prefix executor
+superagent-client happier-check
+superagent-client happier-repo --name 我的项目 --path /绝对路径/仓库 --write-path src --check "python -m pytest" --ack-cloud-transfer
+superagent-client happier-run`}</pre>
+        <p>首次使用请先在本机完成 Claude 登录。只授权实际需要的路径和检查命令；撤销用 happier-revoke --name 我的项目。</p>
+      </details>
       <div className="device-grid">
         {devices.length === 0 && (
           <div className="empty">

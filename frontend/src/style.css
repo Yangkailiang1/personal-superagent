@@ -1590,3 +1590,11 @@ h3 {
     max-width: 90%;
   }
 }
+
+/* 外部执行器交付卡沿用任务正文宽度；长分支与命令在小屏换行。 */
+.external-run { margin: 20px 40px; padding: 20px; min-width: 0; }
+.external-run pre, .external-run code { overflow-wrap: anywhere; white-space: pre-wrap; }
+.external-run .approval-card { padding: 16px; margin: 18px 0; }
+.external-run details { margin: 12px 0; }
+.external-run > small { display: block; margin-top: 12px; }
+@media (max-width: 650px) { .external-run { margin: 16px; padding: 16px; } }

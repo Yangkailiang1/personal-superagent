@@ -25,7 +25,7 @@ def require_postgres() -> None:
 
 
 @transaction.atomic
-def claim_next(worker_id, device=None) -> Attempt | None:
+def claim_next(worker_id, device=None, executor_kind="deepagents") -> Attempt | None:
     require_postgres()
     # 所有 Worker 共享同一事务级锁，避免分别计数后同时突破全局额度。
     with connection.cursor() as cursor:
@@ -36,7 +36,8 @@ def claim_next(worker_id, device=None) -> Attempt | None:
     if occupied >= GLOBAL_LIMIT:
         return None
     query = Task.objects.select_for_update(skip_locked=True).filter(
-        status="queued", attempts__state="queued", attempts__execution_device=device
+        status="queued", attempts__state="queued", attempts__execution_device=device,
+        attempts__executor_kind=executor_kind
     )
     if device is not None:
         if Attempt.objects.filter(
@@ -80,7 +81,7 @@ def heartbeat(attempt_id, token) -> bool:
 def expire_leases() -> None:
     ids = list(
         Attempt.objects.filter(
-            state="running",
+            Q(state="running") | Q(state="waiting_approval", executor_kind="happier"),
             heartbeat_at__lt=timezone.now() - timedelta(seconds=LEASE_SECONDS),
         ).values_list("id", "task_id")
     )
@@ -89,7 +90,7 @@ def expire_leases() -> None:
             Task.objects.select_for_update().get(pk=task_id)
             attempt = Attempt.objects.select_for_update().get(pk=attempt_id)
             if (
-                attempt.state == "running"
+                attempt.state in {"running", "waiting_approval"}
                 and attempt.heartbeat_at
                 < timezone.now() - timedelta(seconds=LEASE_SECONDS)
             ):

@@ -20,7 +20,12 @@ class Step(BaseModel):
     key: str = Field(pattern=r"^[a-z][a-z0-9_-]{0,31}$")
     title: str = Field(min_length=1, max_length=120)
     goal: str = Field(min_length=1, max_length=2500)
-    role: Literal["writer", "reviewer", "researcher", "image_designer"] = "writer"
+    role: Literal["writer", "reviewer", "researcher", "image_designer", "coder"] = "writer"
+    repository_id: str = ""
+    repository_version: int = 0
+    base_commit: str = ""
+    write_paths: list[str] = Field(default_factory=list, max_length=24)
+    checks: list[str] = Field(default_factory=list, max_length=12)
     depends_on: list[str] = Field(default_factory=list, max_length=12)
     tools: list[str] = Field(default_factory=list, max_length=12)
     agent_id: str = ""

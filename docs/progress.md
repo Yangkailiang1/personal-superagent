@@ -115,3 +115,7 @@ V0.5 最终组合 51 项 Django/PostgreSQL（85.859 秒）、26 项 pytest（1.7
 V0.6 组合回归 64 项 Django/PostgreSQL（105.094 秒）、30 项 pytest（3.67 秒）通过；本机 Chromium 完整主对话与知识闭环通过。两个独立客户端实例经真实 HTTP/子进程完成审批恢复；尚未实测不同物理设备或调用真实付费服务。
 
 V0.6 服务器 Chromium 全流程通过：四选项/自定义、Plan 刷新、自动路由依赖执行、审批、知识修订/查询与手机布局。真实执行迁移，旧用户数据保留。另通过原生本机文件审批专项 1 项；物理多设备和外部付费服务仍未验证。
+
+## 2026-11-06 V0.7：HappierExecutor / Claude 本机代码任务
+
+保留 Django Task、Plan、知识库和现有设备协议，适配固定上游 Happier 的 Claude backend 生命周期，新增 TypeScript 执行器、本机仓库授权、独立 worktree、版本化运行映射、网页工具审批、差异及实际检查回收。没有部署完整 Happier 服务，也不声称兼容其账号或同步协议。首次回归 70 项 PostgreSQL/Django、32 项 pytest、4 项 Node 通过；专项 HTTP/Node/Git 链路通过。真实 Claude 登录状态检查超时，付费模型请求 0；未验证项详见 releases/v0.7/verification.md。

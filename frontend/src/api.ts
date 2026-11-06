@@ -110,6 +110,8 @@ export type Task = TaskSummary & {
     error: string;
     stopped: boolean;
     workflow_version: string;
+    executor?: string;
+    external?: any;
     execution_device_id?: string | null;
     scope?: { device_id: string; device_name?: string; label: string } | null;
     started_at: string | null;

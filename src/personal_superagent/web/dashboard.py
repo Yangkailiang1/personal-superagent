@@ -101,6 +101,7 @@ def task_data(task):
         "agent": {
             "id": str(task.execution_agent_id),
             "name": task.execution_agent.name,
+            "executor_kind": task.execution_agent.executor_kind,
             "device_id": str(task.execution_agent.device_id)
             if task.execution_agent.device_id
             else None,
@@ -125,8 +126,11 @@ def task_data(task):
         )
     )
     if attempt:
+        from personal_superagent.happier.services import snapshot as external_snapshot
         data["attempt"] = {
             "id": str(attempt.pk),
+            "executor": attempt.executor_kind,
+            "external": external_snapshot(attempt),
             "state": attempt.state,
             "mode": attempt.mode,
             "activity": attempt.activity,

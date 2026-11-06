@@ -59,3 +59,5 @@ uv run --locked pytest -q
 - [第一课](docs/lessons/01-single-agent.md) / [第二课](docs/lessons/02-django-tasks.md)（历史教学参考）
 
 主对话、工具及本机 Agent 使用见 [V0.6 运行手册](docs/releases/v0.6/operations.md)，实际结果与未验证项见 [验证报告](docs/releases/v0.6/verification.md)。设备接入沿用 [V0.4 手册](docs/releases/v0.4/operations.md)。未知本地操作不重放，写入仍需审批；未开放公开注册或任意 Shell。
+
+V0.7 本机 Claude 代码执行器：见 [运行说明](docs/releases/v0.7/operations.md)、[架构](docs/releases/v0.7/architecture.md)、[核心逻辑](docs/releases/v0.7/implementation.md)、[验证记录](docs/releases/v0.7/verification.md) 和 [上游复用清单](executor/UPSTREAM.md)。现有 DeepAgents、Task、Plan 和知识库保留；不需要 Happier 云端服务。

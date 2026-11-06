@@ -16,6 +16,7 @@ export function MainChat({
     [text, setText] = useState(""),
     [mode, setMode] = useState("demo"),
     [agents, setAgents] = useState<any[]>([]),
+    [repositories, setRepositories] = useState<any[]>([]),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [custom, setCustom] = useState(""),
@@ -40,6 +41,8 @@ export function MainChat({
         if (alive) setList(items.items);
         const profiles = await api<any>("/api/collaboration/agents/");
         if (alive) setAgents(profiles.items);
+        const repos = await api<any>("/api/happier/repositories/");
+        if (alive) setRepositories(repos.items);
         if (id) {
           const data = await api(`/api/intake/conversation/?id=${id}`);
           if (alive) setC(data);
@@ -217,6 +220,13 @@ export function MainChat({
                   {step.role} · 依赖：{step.depends_on.join(", ") || "无"} ·
                   工具：{step.tools.join(", ") || "纯文本"}
                 </small>
+                {repositories.length > 0 && <label>本机代码执行目标
+                  <select aria-label={`代码仓库 ${step.key}`} value={step.repository_id || ""} disabled={busy || running || c.releases?.some((r:any)=>r.version===c.version)} onChange={e=>{
+                    const repo=repositories.find(r=>r.id===e.target.value); if(!repo)return;
+                    action("edit",{draft:{...c.draft,steps:c.draft.steps.map((s:any)=>s.key===step.key?{...s,role:"coder",agent_id:repo.agent_id,repository_id:repo.id,repository_version:repo.version,base_commit:repo.baseline,write_paths:repo.policy.write_paths,checks:repo.policy.checks,grant_id:"",tools:["repository_read","repository_write","repository_command"]}:s)}});
+                  }}><option value="">保留当前角色</option>{repositories.filter(r=>r.agent__enabled).map(r=><option key={r.id} value={r.id}>{r.label} · {r.baseline.slice(0,8)}</option>)}</select>
+                </label>}
+                {step.repository_id && <p className="data-notice">Claude · 基线 {step.base_commit.slice(0,12)} · 最多 {repositories.find(r=>r.id===step.repository_id)?.policy.max_turns ?? "待核查"} 轮 · 写入 {step.write_paths.join("、")} · 检查 {step.checks.join("；") || "未配置，不能视为测试通过"}。低风险及预授权命令自动执行，其余逐项审批；本机非安全沙箱。</p>}
                 <p>交付：{step.deliverables.join("；")}</p>
                 <p>验收：{step.acceptance.join("；")}</p>
                 <small>
@@ -304,7 +314,7 @@ export function MainChat({
                   request_key: crypto.randomUUID(),
                   accept_assumptions: accept,
                   policy: {
-                    mode,
+                    mode: c.draft.steps.every((s:any)=>s.role==="coder") ? "real" : mode,
                     max_model_calls: calls,
                     max_images: images,
                     timeout: 1800,
@@ -315,7 +325,7 @@ export function MainChat({
               发布并执行
             </button>
             <p className="data-notice">
-              授权本计划的任务、工具与执行限额；写入仍逐次审批。依赖满足后自动派工，失败不自动重试。
+              授权本计划的任务、工具与执行限额；Claude 使用本机登录、仓库授权和轮次上限，其他执行器使用模型请求上限。依赖满足后自动派工，失败不自动重试。
             </p>
           </div>
         )}

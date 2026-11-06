@@ -116,7 +116,7 @@ function App() {
           <span className="brand-icon">
             <Sparkle size={19} />
           </span>
-          superagent<span className="version">0.6</span>
+          superagent<span className="version">0.7</span>
         </a>
         <button
           className="new-task"

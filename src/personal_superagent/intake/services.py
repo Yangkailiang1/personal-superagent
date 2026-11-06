@@ -91,6 +91,11 @@ def send(user, id, data):
                     fromlist=["AgentProfile"],
                 ).AgentProfile.objects.filter(owner=user, enabled=True)
             ],
+            "repositories": list(
+                __import__("personal_superagent.happier.models", fromlist=["Repository"])
+                .Repository.objects.filter(device__owner=user, enabled=True, agent__enabled=True)
+                .values("id", "agent_id", "label", "baseline", "policy", "version")
+            ),
             "tasks": [
                 {"id": str(t.pk), "title": t.title, "status": t.status}
                 for t in Task.objects.filter(release__conversation=c)[:30]

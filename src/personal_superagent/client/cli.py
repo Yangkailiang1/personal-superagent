@@ -31,10 +31,41 @@ def main():
     sub.add_parser("agent-tools")
     agent = sub.add_parser("agent-run")
     agent.add_argument("--once", action="store_true")
+    repo = sub.add_parser("happier-repo")
+    repo.add_argument("--name", required=True)
+    repo.add_argument("--path", required=True)
+    repo.add_argument("--base", default="HEAD")
+    repo.add_argument("--write-path", action="append", required=True)
+    repo.add_argument("--check", action="append", default=[])
+    repo.add_argument("--ack-cloud-transfer", action="store_true", required=True)
+    remove = sub.add_parser("happier-revoke")
+    remove.add_argument("--name", required=True)
+    sub.add_parser("happier-check")
+    happier = sub.add_parser("happier-run")
+    happier.add_argument("--once", action="store_true")
     args = parser.parse_args()
     try:
         root = directory(args.config_dir)
-        if args.action == "agent-tools":
+        if args.action.startswith("happier-"):
+            from .happier import repositories, worker
+
+            if args.action == "happier-repo":
+                item = repositories.register(
+                    root, args.name, args.path, args.write_path, args.check, args.base
+                )
+                print("已登记仓库：", item["label"], "基线：", item["baseline"])
+            elif args.action == "happier-revoke":
+                repositories.save(
+                    root,
+                    [r for r in repositories.load(root) if r["label"] != args.name],
+                )
+                print("已撤销本机仓库授权；运行客户端同步云端。")
+            elif args.action == "happier-check":
+                worker.check(root)
+                print("Claude 登录与执行依赖可用；未调用模型，工具链路仍需实际验收。")
+            else:
+                worker.run(root, once=args.once)
+        elif args.action == "agent-tools":
             from .tools_config import configure
 
             configure(root)
