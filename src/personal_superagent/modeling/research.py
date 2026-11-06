@@ -154,9 +154,7 @@ def run_research(snapshot, emit):
             output.append(record)
         return output
 
-    model = build_model(demo=False).model_copy(
-        update={"request_timeout": 120, "max_tokens": 4096}
-    )
+    model = build_model(demo=False, timeout=120, max_tokens=4096)
     graph = create_deep_agent(
         model=model,
         backend=StateBackend(),

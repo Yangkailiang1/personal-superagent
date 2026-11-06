@@ -37,7 +37,7 @@ class LessonModel(BaseChatModel):
         return ChatResult(generations=[ChatGeneration(message=reply)])
 
 
-def build_model(*, demo: bool) -> BaseChatModel:
+def build_model(*, demo: bool, timeout: float = 30, max_tokens: int | None = None) -> BaseChatModel:
     """输入显式模式，输出支持工具调用的模型；配置缺失立即报错。"""
     if demo:
         return LessonModel()
@@ -48,5 +48,6 @@ def build_model(*, demo: bool) -> BaseChatModel:
     return ChatOpenAI(
         api_key=key, model=name,
         base_url=os.environ.get("MODEL_BASE_URL") or None,
-        timeout=30, max_retries=0,
+        # 超时必须在构造时传入，model_copy 不会重建已创建的 HTTP 客户端。
+        timeout=timeout, max_tokens=max_tokens, max_retries=0,
     )

@@ -133,6 +133,8 @@ def consume(running: Running) -> None:
             running.result = redact(str(data.get("text", "")))[:32000]
         elif kind == "error":
             running.error = "执行失败（" + str(data.get("code", "AgentError"))[:80] + "），请检查配置、网络或工具。"
+            if data.get("code") in {"OpenAITimeoutError", "APITimeoutError"}:
+                running.error = "模型服务未在请求时限内返回，本次执行已停止。可重试，原执行记录会保留。"
             if data.get("code") == "CheckpointError":
                 running.error = redact(str(data.get("message", "checkpoint 无法恢复")))[:500]
         elif kind == "snapshot":
