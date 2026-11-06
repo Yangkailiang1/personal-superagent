@@ -179,7 +179,18 @@ def run_research(snapshot, emit):
     if not counts["delegations"] or not sources:
         raise ValueError("没有真实委派或搜索证据，不能交付")
     content = result["messages"][-1].content
+    if isinstance(content, list):
+        content = "\n".join(
+            b.get("text", "")
+            for b in content
+            if isinstance(b, dict) and b.get("type") == "text"
+        )
+    cited = [
+        {"title": v["title"][:160], "url": v["url"]}
+        for v in sources.values()
+        if len(v["url"]) <= 2048
+    ][:8]
     return json.dumps(
-        {"brief": content, "sources": list(sources.values()), "counts": counts},
+        {"brief": str(content)[:8000], "sources": cited, "counts": counts},
         ensure_ascii=False,
     )
