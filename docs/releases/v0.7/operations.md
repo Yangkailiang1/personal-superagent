@@ -69,3 +69,5 @@ uv run superagent-client --config-dir ~/.personal-superagent happier-revoke --na
 停用时停止本机 happier-run，并撤销仓库授权；保留现有 DeepAgents 任务。数据库回退不能直接降级并丢弃新表；恢复旧 release 前核查活动执行并按备份策略处理。
 
 补充：若本机 `uv` 尚未加入 PATH，本工作区可使用 `.artifacts/tooling/bin/uv` 替代上述 `uv`。预授权检查首版支持 Python/pytest、npm/pnpm 测试构建，以及只读 Git/版本检查；删除、安装等操作不能伪装成检查命令。检查输出只保留末尾 20 KB；超时即失败，即使命令处理终止信号后返回 0。
+
+已部署服务器访问：在项目根目录运行 `uv run --group deploy python scripts/deploy/remote.py tunnel --port 18002`，保持终端运行，再打开 `http://127.0.0.1:18002/app/`。如果该端口已有你的隧道，直接复用并刷新页面，不要重复启动。设备已经配对时跳过 pair，直接登记仓库并运行 happier-run。
