@@ -59,6 +59,8 @@ class SceneSpec(BaseModel):
     title: str = Field(min_length=1, max_length=120)
     materials: list[Material] = Field(min_length=1, max_length=24)
     objects: list[Shape] = Field(min_length=1, max_length=180)
+    resolution_width: int = Field(default=1600, ge=256, le=2048)
+    resolution_height: int = Field(default=1200, ge=256, le=2048)
     camera: Vector = Field(default_factory=lambda: [6, -9, 5])
     target: Vector = Field(default_factory=lambda: [0, 0, 1])
 

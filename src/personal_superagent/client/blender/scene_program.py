@@ -109,8 +109,8 @@ def apply_scene(payload, directory):
     scene.render.engine = "CYCLES"
     scene.cycles.samples = 24
     scene.cycles.use_denoising = True
-    scene.render.resolution_x = 900
-    scene.render.resolution_y = 900
+    scene.render.resolution_x = spec["resolution_width"]
+    scene.render.resolution_y = spec["resolution_height"]
     scene.render.resolution_percentage = 100
     scene.world.color = (0.18, 0.18, 0.18)
     scene.render.image_settings.file_format = "PNG"

@@ -351,7 +351,7 @@ def sync_files(root, connection):
                         stdout=subprocess.DEVNULL,
                         stderr=subprocess.DEVNULL,
                     )
-                elif path.suffix == ".png":
+                elif path.suffix in {".png", ".json"}:
                     subprocess.Popen(["open", str(path)])
         opened.append(f["open_request_id"])
     request(connection, "modeling-files", {"files": statuses, "opened": opened})

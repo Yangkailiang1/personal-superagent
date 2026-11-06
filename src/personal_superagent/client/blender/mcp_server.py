@@ -17,6 +17,7 @@ def rpc(kind, params=None):
         s.settimeout(240)
         s.sendall(json.dumps({"type": kind, "params": params or {}}).encode())
         data = b""
+        response = None
         while len(data) < 2000000:
             part = s.recv(65536)
             if not part:
@@ -29,7 +30,7 @@ def rpc(kind, params=None):
                 continue
         else:
             raise ValueError("Blender response too large")
-    if response.get("status") != "success":
+    if not isinstance(response, dict) or response.get("status") != "success":
         raise ValueError("Blender operation failed")
     return response["result"]
 
