@@ -114,6 +114,7 @@ def execute(root, connection, db, job):
     events = queue.Queue()
     sequence = 0
     result = {"state": "interrupted", "error": "本机建模未完成"}
+    stage = "启动 Blender"
     try:
         log = (directory / "blender.log").open("w")
         blender = subprocess.Popen(
@@ -140,6 +141,7 @@ def execute(root, connection, db, job):
         os.environ["BLENDER_MCP_PORT"] = str(port)
         deadline = time.monotonic() + 30
         while time.monotonic() < deadline:
+            stage = "等待 Blender 与控制面心跳"
             if not call(connection, job, "heartbeat")["continue"]:
                 raise ValueError("归属失效")
             try:
@@ -188,6 +190,7 @@ def execute(root, connection, db, job):
                 },
             }
         }
+        stage = "启动本机执行器"
         agent = subprocess.Popen(
             ["node", str(EXECUTOR), instance],
             stdin=subprocess.PIPE,
@@ -219,6 +222,7 @@ def execute(root, connection, db, job):
         )
         if previous_spec:
             prompt += "\n本任务已有前次由工作 Agent 生成的本机设计稿。本次只需验收闭环：请直接调用 build_model 不传 spec 复用草稿，然后 inspect_model、render_model，不扩展设计或重新输出巨大几何 JSON，最后一句话总结即可。"
+        stage = "提交执行输入"
         agent.stdin.write(
             json.dumps(
                 {
@@ -253,6 +257,7 @@ def execute(root, connection, db, job):
         tool_success = set()
         while time.monotonic() - start < job["snapshot"]["policy"]["timeout"]:
             if time.monotonic() - last > 3:
+                stage = "控制面心跳"
                 if (
                     manifest(root) != job["snapshot"]["capability"]
                     or not call(connection, job, "heartbeat")["continue"]
@@ -260,6 +265,7 @@ def execute(root, connection, db, job):
                     raise ValueError("授权或归属改变")
                 last = time.monotonic()
             try:
+                stage = "读取执行事件"
                 e = events.get(timeout=0.2)
             except queue.Empty:
                 continue
@@ -294,6 +300,7 @@ def execute(root, connection, db, job):
         rpc("execute_code", {"code": 'print("scene finalized")'})
         stop(blender)
         # 独立重开文件并检查，不以模型口头声明代替验证。
+        stage = "重新打开模型检查"
         verify = subprocess.run(
             [
                 str(BLENDER),
@@ -324,10 +331,13 @@ def execute(root, connection, db, job):
             "files": [],
             "violations": [],
         }
-    except (ValueError, OSError, subprocess.SubprocessError, KeyError):
+    except (ValueError, OSError, subprocess.SubprocessError, KeyError) as exc:
+        # 只记录阶段与异常类型，原始异常可能带接口、路径或认证信息，不上传。
+        diagnostic = {"stage": stage, "code": type(exc).__name__}
+        (directory / "failure.json").write_text(json.dumps(diagnostic, ensure_ascii=False))
         result = {
             "state": "interrupted",
-            "error": "本机建模/检查未完成，现场已保留，不自动重放",
+            "error": f"本机建模中断（{stage}，{type(exc).__name__}）；现场已保留，不自动重放",
         }
     finally:
         if agent:
