@@ -20,7 +20,7 @@ from personal_superagent.execution.lifecycle import (
 from personal_superagent.execution.claims import claim_next, expire_leases
 from personal_superagent.execution.models import Attempt
 from .models import Repository, ExternalRun, Permission
-from .services import hello, claim, control, decide
+from .services import hello, claim, control, decide, snapshot
 
 
 class HappierTests(TransactionTestCase):
@@ -96,6 +96,7 @@ class HappierTests(TransactionTestCase):
         self.a.refresh_from_db()
         self.assertEqual(self.a.state, "waiting_approval")
         self.assertFalse(self.a.process_stopped)
+        self.assertTrue(snapshot(self.a)["can_decide"])
         p = self.a.external_run.permissions.get()
         with self.assertRaises(Http404):
             decide(
@@ -139,6 +140,7 @@ class HappierTests(TransactionTestCase):
         self.a.refresh_from_db()
         self.assertFalse(self.a.process_stopped)
         self.assertFalse(self.send("heartbeat")["continue"])
+        self.assertFalse(snapshot(self.a)["can_decide"])
         self.send("result", report={"state": "succeeded", "text": "late"})
         self.a.refresh_from_db()
         self.assertEqual(self.a.state, "cancelled")

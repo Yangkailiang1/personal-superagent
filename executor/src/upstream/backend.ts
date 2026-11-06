@@ -61,6 +61,8 @@ export class HappierExecutor {
         permissionMode: "default",
         settingSources: [],
         mcpServers: {},
+        strictMcpConfig: true,
+        plugins: [],
         tools: ["Read", "Glob", "Grep", "Write", "Edit", "Bash"],
         maxTurns: input.max_turns,
         persistSession: true,
@@ -104,7 +106,10 @@ export class HappierExecutor {
                                 " --no-textconv --no-ext-diff"
                               : hook.tool_input.command,
                             timeout: Math.min(
-                              Number(hook.tool_input.timeout) || 120000,
+                              Math.max(
+                                1000,
+                                Number(hook.tool_input.timeout) || 120000,
+                              ),
                               120000,
                             ),
                             run_in_background: false,

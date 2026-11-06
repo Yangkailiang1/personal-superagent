@@ -119,3 +119,5 @@ V0.6 服务器 Chromium 全流程通过：四选项/自定义、Plan 刷新、�
 ## 2026-11-06 V0.7：HappierExecutor / Claude 本机代码任务
 
 保留 Django Task、Plan、知识库和现有设备协议，适配固定上游 Happier 的 Claude backend 生命周期，新增 TypeScript 执行器、本机仓库授权、独立 worktree、版本化运行映射、网页工具审批、差异及实际检查回收。没有部署完整 Happier 服务，也不声称兼容其账号或同步协议。首次回归 70 项 PostgreSQL/Django、32 项 pytest、4 项 Node 通过；专项 HTTP/Node/Git 链路通过。真实 Claude 登录状态检查超时，付费模型请求 0；未验证项详见 releases/v0.7/verification.md。
+
+V0.7 发布候选独立环境 71 项 PostgreSQL/Django 通过；最后专项 6 项、pytest 35 项、Node 5 项通过。服务器已真实执行迁移、派发、网页审批、检查/下载及 Web 重启持久化验收；响应明确为固定 Node 协议夹具，非真实 Claude。临时验收账号清理完成。工作区原有注释未纳入代码提交，旧工作图文件未修改；开发分支为 codex/v0.7-happier-executor。

@@ -20,13 +20,17 @@ export function HappierRun({
         <article className="approval-card" key={p.id}>
           <h3>
             {p.tool} ·{" "}
-            {p.decision === "pending"
-              ? "等待确认"
-              : p.applied
-                ? p.decision === "approve"
-                  ? "已批准本次"
-                  : "已拒绝"
-                : "等待本机确认决定"}
+            {p.decision === "cancelled"
+              ? "请求已失效"
+              : p.decision === "pending"
+                ? run.can_decide
+                  ? "等待确认"
+                  : "审批暂停，请检查任务状态"
+                : p.applied
+                  ? p.decision === "approve"
+                    ? "已批准本次"
+                    : "已拒绝"
+                  : "等待本机确认决定"}
           </h3>
           <pre style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
             {JSON.stringify(p.arguments, null, 2)}
@@ -34,7 +38,7 @@ export function HappierRun({
           {p.tool === "Bash" && (
             <p>命令在本机运行，可能访问工作目录以外的资源。请检查完整命令。</p>
           )}
-          {p.decision === "pending" && (
+          {p.decision === "pending" && run.can_decide && (
             <footer>
               {(["reject", "approve"] as const).map((decision) => (
                 <button
@@ -78,7 +82,10 @@ export function HappierRun({
       )}
       {report.files?.map((f: any) => (
         <details key={f.path}>
-          <summary>{f.path}{f.deleted ? " · 删除" : ""}</summary>
+          <summary>
+            {f.path}
+            {f.deleted ? " · 删除" : ""}
+          </summary>
           <pre style={{ whiteSpace: "pre-wrap" }}>{f.content}</pre>
         </details>
       ))}

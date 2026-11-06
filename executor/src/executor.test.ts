@@ -95,6 +95,8 @@ test("recorded SDK event lifecycle preserves IDs, permissions and explicit resul
   assert.equal(executor.collect().state, "succeeded");
   assert.equal(events[1].call_id, "call-one");
   assert.deepEqual(config.settingSources, []);
+  assert.equal(config.strictMcpConfig, true);
+  assert.deepEqual(config.plugins, []);
   assert.equal(config.permissionMode, "default");
 });
 test("idle or EOF without result is not success", async () => {
@@ -109,4 +111,19 @@ test("idle or EOF without result is not success", async () => {
   );
   await assert.rejects(executor.start({ cwd, prompt: "x", max_turns: 1 }));
   assert.throws(() => executor.collect());
+});
+
+test("approval cache binds canonical request to immutable arguments", async () => {
+  const { PermissionBroker } = await import("./permissions.js");
+  const events: any[] = [];
+  const broker = new PermissionBroker((e) => events.push(e));
+  const first = broker.request("one", "Bash", { command: "custom" });
+  assert.equal(first, broker.request("one", "Bash", { command: "custom" }));
+  assert.equal(events.length, 1);
+  assert.throws(() => broker.request("one", "Bash", { command: "changed" }));
+  broker.respond("one", "reject");
+  assert.equal(await first, false);
+  const second = broker.request("two", "Bash", { command: "custom" });
+  broker.cancel();
+  assert.equal(await second, false);
 });

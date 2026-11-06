@@ -67,3 +67,5 @@ uv run superagent-client --config-dir ~/.personal-superagent happier-revoke --na
 按现有 scripts/deploy/release.py 发布经过验证的提交：备份 PostgreSQL 与 runtime，执行编号迁移，切换 release，再启动 Web/Worker。Happier 客户端需单独更新 Python 包并安装 executor 依赖。仓库开发模式需完整源码，Python wheel 不捆绑 Node 程序。
 
 停用时停止本机 happier-run，并撤销仓库授权；保留现有 DeepAgents 任务。数据库回退不能直接降级并丢弃新表；恢复旧 release 前核查活动执行并按备份策略处理。
+
+补充：若本机 `uv` 尚未加入 PATH，本工作区可使用 `.artifacts/tooling/bin/uv` 替代上述 `uv`。预授权检查首版支持 Python/pytest、npm/pnpm 测试构建，以及只读 Git/版本检查；删除、安装等操作不能伪装成检查命令。检查输出只保留末尾 20 KB；超时即失败，即使命令处理终止信号后返回 0。

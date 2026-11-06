@@ -99,3 +99,32 @@ def test_upstream_sources_match_pinned_manifest():
 def test_destructive_commands_cannot_be_registered_as_checks():
     with pytest.raises(ValueError):
         RepositoryPolicy(write_paths=["src"], checks=["rm -rf src"])
+
+
+def test_stop_waits_for_process_group_not_just_leader():
+    import sys, time, psutil
+    from personal_superagent.client.happier.worker import stop
+
+    child = "import signal,time; signal.signal(signal.SIGTERM,signal.SIG_IGN); time.sleep(60)"
+    parent = (
+        "import subprocess,sys,time; p=subprocess.Popen([sys.executable,'-c',"
+        + repr(child)
+        + "]); print(p.pid,flush=True); time.sleep(60)"
+    )
+    process = subprocess.Popen(
+        [sys.executable, "-c", parent],
+        stdout=subprocess.PIPE,
+        text=True,
+        start_new_session=True,
+    )
+    pid = int(process.stdout.readline())
+    time.sleep(0.2)
+    try:
+        stop(process)
+        assert (
+            not psutil.pid_exists(pid)
+            or psutil.Process(pid).status() == psutil.STATUS_ZOMBIE
+        )
+        stop(process)  # 重复收尾不再触碰已释放的 PID/进程组。
+    finally:
+        process.stdout.close()

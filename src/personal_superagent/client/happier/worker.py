@@ -71,18 +71,48 @@ def control(config, job, action, **data):
 
 
 def stop(process):
+    """进程组清空后才确认停止；主进程退出不代表 CLI/Shell 子孙已退出。"""
+    if getattr(process, "_workbench_stopped", False):
+        return
+
+    def members():
+        items = []
+        for item in psutil.process_iter(["pid", "status"]):
+            try:
+                if (
+                    os.getpgid(item.pid) == process.pid
+                    and item.status() != psutil.STATUS_ZOMBIE
+                ):
+                    items.append(item)
+            except (ProcessLookupError, psutil.NoSuchProcess):
+                pass
+        return items
+
     try:
         os.killpg(process.pid, signal.SIGTERM)
     except ProcessLookupError:
+        process.wait(timeout=4)
+        process._workbench_stopped = True
         return
     try:
         process.wait(timeout=4)
     except subprocess.TimeoutExpired:
+        pass
+    deadline = time.monotonic() + 4
+    while members() and time.monotonic() < deadline:
+        time.sleep(0.05)
+    if members():
         try:
             os.killpg(process.pid, signal.SIGKILL)
         except ProcessLookupError:
             pass
-        process.wait(timeout=4)
+        deadline = time.monotonic() + 4
+        while members() and time.monotonic() < deadline:
+            time.sleep(0.05)
+    if members():
+        raise ValueError("旧进程组尚未停止，保留领取归属，请人工核查")
+    process.wait(timeout=4)
+    process._workbench_stopped = True
 
 
 def upload(config, ledger, job):
@@ -238,10 +268,25 @@ def execute(root, config, ledger, job):
                         checker.pid,
                         psutil.Process(checker.pid).create_time(),
                     )
+                    tail = bytearray()
+
+                    def drain(stream, buffer):
+                        try:
+                            while data := stream.read(4096):
+                                buffer.extend(data)
+                                del buffer[:-20000]
+                        finally:
+                            stream.close()
+
+                    log_reader = threading.Thread(
+                        target=drain, args=(checker.stdout, tail), daemon=True
+                    )
+                    log_reader.start()
+                    timed_out = False
                     check_start = time.monotonic()
                     while True:
                         try:
-                            output, _ = checker.communicate(timeout=1)
+                            checker.wait(timeout=1)
                             break
                         except subprocess.TimeoutExpired:
                             if (
@@ -249,7 +294,7 @@ def execute(root, config, ledger, job):
                                 or time.monotonic() - start > policy["timeout"]
                             ):
                                 stop(checker)
-                                output = b"check timed out"
+                                timed_out = True
                                 break
                             if time.monotonic() - last_heartbeat > 3:
                                 if not control(config, job, "heartbeat")["continue"]:
@@ -257,10 +302,12 @@ def execute(root, config, ledger, job):
                                     raise ValueError("检查中取消或失联")
                                 last_heartbeat = time.monotonic()
                     stop(checker)
+                    log_reader.join(timeout=2)
+                    output = bytes(tail) if not timed_out else b"check timed out"
                     checks.append(
                         {
                             "command": command,
-                            "exit_code": checker.returncode,
+                            "exit_code": 124 if timed_out else checker.returncode,
                             "output": output.decode(errors="replace")[-20000:],
                         }
                     )

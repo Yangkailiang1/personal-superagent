@@ -18,7 +18,7 @@
 - `client/happier/ledger.py`：SQLite 保存启动意图、进程身份、顺序事件、上传游标、最终结果和回执。
 - `client/happier/worker.py`：驱动 Node、周期续租、处理决定、执行预授权检查、收集结果；中断只核查/收尾，不重放任务。
 - `executor/src/upstream/backend.ts`：由 Happier backend 适配，调用固定 Claude Agent SDK；通过 init 获取 session ID，只以 result 判断成功；EOF/idle 不等于完成。
-- `executor/src/policy.ts`：每个工具执行前判 allow/deny/ask；`main.ts` 是版本化 JSONL 控制入口，处理 start/inspect/respond/cancel，完成时 collect。
+- `executor/src/policy.ts`：每个工具执行前判 allow/deny/ask；`permissions.ts` 绑定审批 ID 和不可变工具参数，防止缓存决定被用到新命令；`main.ts` 是版本化 JSONL 控制入口，处理 start/inspect/respond/cancel，完成时 collect。
 
 JSONL 每条含 protocol=1，启动参数由本机授权构造。云端没有下发可执行代码、环境变量、CLI 路径或任意参数的入口。凭据使用用户本机 Claude 登录，开发者应在自己的终端配置。
 

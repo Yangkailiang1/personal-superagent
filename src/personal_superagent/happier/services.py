@@ -397,6 +397,12 @@ def snapshot(attempt):
         "baseline": attempt.input_snapshot["base_commit"],
         "policy": attempt.input_snapshot["policy"],
         "report": run.report,
+        "can_decide": bool(
+            attempt.state == "waiting_approval"
+            and not attempt.cancel_requested_at
+            and attempt.heartbeat_at
+            and attempt.heartbeat_at >= timezone.now() - timedelta(seconds=20)
+        ),
         "permissions": list(
             run.permissions.values(
                 "id", "tool", "arguments", "version", "decision", "applied"

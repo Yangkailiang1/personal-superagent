@@ -1,27 +1,15 @@
 import { createInterface } from "node:readline";
 import { HappierExecutor } from "./upstream/backend.js";
 import { classify, type Policy } from "./policy.js";
+import { PermissionBroker } from "./permissions.js";
 const emit = (v: Record<string, unknown>) =>
   process.stdout.write(JSON.stringify({ protocol: 1, ...v }) + "\n");
-const pending = new Map<
-  string,
-  { resolve: (v: boolean) => void; tool: string; args: string }
->();
-const decisions = new Map<string, Promise<boolean>>();
+const broker = new PermissionBroker(emit);
 let policy: Policy;
 const executor = new HappierExecutor(emit, async (id, tool, args) => {
   const verdict = classify(tool, args, policy);
   if (verdict !== "ask") return verdict === "allow";
-  if (!decisions.has(id)) {
-    decisions.set(
-      id,
-      new Promise((resolve) =>
-        pending.set(id, { resolve, tool, args: JSON.stringify(args) }),
-      ),
-    );
-    emit({ kind: "permission", request_id: id, tool, args });
-  }
-  return decisions.get(id)!;
+  return broker.request(id, tool, args);
 });
 let running = false;
 const lines = createInterface({ input: process.stdin });
@@ -51,18 +39,9 @@ lines.on("line", (line) => {
           process.stdin.pause();
         });
     } else if (msg.action === "respond") {
-      const p = pending.get(msg.request_id);
-      if (!p || !["approve", "reject"].includes(msg.decision))
-        throw Error("Unknown permission");
-      p.resolve(msg.decision === "approve");
-      pending.delete(msg.request_id);
-      emit({
-        kind: "permission_applied",
-        request_id: msg.request_id,
-        decision: msg.decision,
-      });
+      broker.respond(msg.request_id, msg.decision);
     } else if (msg.action === "cancel") {
-      for (const p of pending.values()) p.resolve(false);
+      broker.cancel();
       void executor.cancel();
     } else if (msg.action === "inspect")
       emit({ kind: "inspection", ...executor.inspect() });
@@ -72,5 +51,6 @@ lines.on("line", (line) => {
   }
 });
 lines.on("close", () => {
+  broker.cancel();
   if (running) void executor.cancel();
 });
