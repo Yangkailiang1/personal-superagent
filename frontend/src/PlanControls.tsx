@@ -15,6 +15,10 @@ export function PlanControls({
   onPublish,
   onEdit,
   advanced,
+  questions,
+  onClarify,
+  clarifying,
+  waitingChoice,
 }: {
   assumptions: string[];
   accepted: boolean;
@@ -29,9 +33,26 @@ export function PlanControls({
   onPublish: () => void;
   onEdit: () => void;
   advanced: boolean;
+  questions: string[];
+  onClarify: () => void;
+  clarifying: boolean;
+  waitingChoice: boolean;
 }) {
   return (
     <div className="plan-controls">
+      {questions.length > 0 && (
+        <section className="plan-open-questions" aria-label="阻止发布的问题">
+          <h3>发布前还需回答 {questions.length} 个问题</h3>
+          <ul>
+            {questions.map((question, i) => (
+              <li key={i}>{question}</li>
+            ))}
+          </ul>
+          <button onClick={onClarify} disabled={busy || clarifying}>
+            {waitingChoice ? "回答上方选择题" : "补充回答"}
+          </button>
+        </section>
+      )}
       {assumptions.length > 0 && (
         <section className="plan-assumptions" aria-label="计划假设">
           <h3>需要你确认的假设</h3>

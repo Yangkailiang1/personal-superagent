@@ -76,7 +76,7 @@ export function MainChat({
     : running ? "本轮对话仍在处理，请等待完成。"
     : pending ? "请先回答上方问题。"
     : advanced ? "请先保存或收起计划编辑。"
-    : c?.draft?.questions?.length ? "计划仍有未决问题，请在对话中补充后再发布。"
+    : c?.draft?.questions?.length ? `还有 ${c.draft.questions.length} 项未决问题，请先补充回答。`
     : c?.draft?.assumptions?.length && !accept ? "请先确认以上假设，再发布计划。"
     : !Number.isInteger(calls) || calls < 1 || calls > 48 || !Number.isInteger(images) || images < 0 || images > 2
       ? "请在执行设置中填写有效限额。" : "";
@@ -268,9 +268,6 @@ export function MainChat({
               </article>
             ))}
             <p>设备与权限：{c.draft.device_needs}</p>
-            {c.draft.questions?.length > 0 && <section className="plan-open-questions">
-              <h3>待澄清</h3><ul>{c.draft.questions.map((q: string, i: number) => <li key={i}>{q}</li>)}</ul>
-            </section>}
             {advanced && (
               <>
                 <textarea
@@ -297,6 +294,16 @@ export function MainChat({
               </>
             )}
             <PlanControls
+              questions={c.draft.questions || []} clarifying={!!running} waitingChoice={!!pending}
+              onClarify={() => {
+                if (pending) {
+                  document.querySelector<HTMLElement>(".question-card input")?.focus();
+                  return;
+                }
+                // 只预填问题，不代替用户回答，也不自动调用模型或清除发布关卡。
+                setText(current => current.trim() ? current : c.draft.questions.map((q: string) => `关于“${q}”\n我的回答：`).join("\n\n"));
+                requestAnimationFrame(() => document.getElementById("main-chat-message")?.focus());
+              }}
               assumptions={c.draft.assumptions || []} accepted={accept} onAccept={setAccept}
               calls={calls} images={images} onCalls={setCalls} onImages={setImages}
               reason={publishReason} busy={busy} advanced={advanced} onEdit={advancedEdit}

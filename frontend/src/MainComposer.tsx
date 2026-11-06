@@ -38,6 +38,7 @@ export function MainComposer({
       }}
     >
       <textarea
+        id="main-chat-message"
         ref={input}
         aria-label="主对话消息"
         rows={1}
