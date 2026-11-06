@@ -158,6 +158,22 @@ def execute(root, connection, db, job):
             "ANTHROPIC_DEFAULT_OPUS_MODEL",
             "ANTHROPIC_DEFAULT_SONNET_MODEL",
         ]
+        previous_spec = None
+        for old_id, payload in db.db.execute(
+            "select id,job from jobs where id!=? order by rowid desc", (id,)
+        ):
+            old_job = json.loads(payload)
+            candidate = Path(cfg["output"]) / old_id / "scene_spec.json"
+            if (
+                old_job.get("task_id") == job["task_id"]
+                and old_job["snapshot"].get("capability", {}).get("grant_id")
+                == cfg["grant_id"]
+                and candidate.is_file()
+                and not candidate.is_symlink()
+                and candidate.resolve().is_relative_to(Path(cfg["output"]).resolve())
+            ):
+                previous_spec = candidate
+                break
         mcp = {
             "blender": {
                 "command": sys.executable,
@@ -166,6 +182,9 @@ def execute(root, connection, db, job):
                     **{k: "" for k in secret_names},
                     "BLENDER_MCP_PORT": str(port),
                     "BLENDER_OUTPUT_DIR": str(directory),
+                    "BLENDER_PREVIOUS_SPEC": str(previous_spec)
+                    if previous_spec
+                    else "",
                 },
             }
         }
@@ -198,6 +217,8 @@ def execute(root, connection, db, job):
             + json.dumps(job["snapshot"]["context"], ensure_ascii=False)
             + "\n你是本机 Blender 建模 Agent。根据研究证据独立设计模型，不预设奶白色卡通。必须使用 blender MCP 的 build_model、inspect_model、render_model 完成建模和实际渲染。你可以改进场景后重新渲染。前方为 -Y，上方为 Z。主体放在原点附近，合理设置 camera/target，整体宽度不超过 6。通过对象命名表达解剖部位与材质，曲线用点集和圆管半径塑造四肢/脚趾。可用噪声斑纹材质。最终简短说明选择的造型、完成内容与局限，文件只留本机，不上传图片或文件字节。"
         )
+        if previous_spec:
+            prompt += "\n本任务已有前次由工作 Agent 生成的本机设计稿。本次只需验收闭环：请直接调用 build_model 不传 spec 复用草稿，然后 inspect_model、render_model，不扩展设计或重新输出巨大几何 JSON，最后一句话总结即可。"
         agent.stdin.write(
             json.dumps(
                 {

@@ -44,8 +44,13 @@ def directory():
 
 
 @mcp.tool()
-def build_model(spec: SceneSpec) -> dict:
-    """Build an editable 3D scene from validated geometry/material parameters. Replaces only this task's isolated scene. Front faces -Y, up is Z. Saves model.blend locally. No Python input."""
+def build_model(spec: SceneSpec | None = None) -> dict:
+    """Build an editable 3D scene from validated geometry/material parameters. Replaces only this task's isolated scene. Front faces -Y, up is Z. Saves model.blend locally. Omit spec to rebuild an available prior design from this SAME task; otherwise supply spec. No Python input."""
+    if spec is None:
+        previous = os.environ.get("BLENDER_PREVIOUS_SPEC")
+        if not previous:
+            raise ValueError("没有本任务的历史设计，请提供 spec")
+        spec = SceneSpec.model_validate_json(Path(previous).read_text())
     root = directory()
     (root / "scene_spec.json").write_text(spec.model_dump_json(indent=2))
     program = Path(__file__).with_name("scene_program.py").read_text()
