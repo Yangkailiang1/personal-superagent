@@ -69,6 +69,9 @@ export function MainChat({
     running = c?.turns.some(
       (t: any) => ["queued", "running"].includes(t.state) || !t.stopped,
     );
+  useEffect(() => {
+    if (pending) document.querySelector(".question-card")?.scrollIntoView({ block: "nearest" });
+  }, [pending?.id]);
   // 确认只对当前修订有效，避免旧版勾选被沿用到新的假设。
   useEffect(() => { setAccept(false); }, [c?.id, c?.version]);
   const publishReason = c?.releases?.some((r: any) => r.version === c.version)
