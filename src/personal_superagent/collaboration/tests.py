@@ -272,3 +272,74 @@ class ImageOwnershipTests(TestCase):
             )
             with self.assertRaises(ValueError):
                 upload(attempt, "../secret.png", base64.b64encode(content).decode())
+
+
+class NativeLocalFilesTests(TransactionTestCase):
+    def test_local_graph_reads_and_writes_only_after_approval(self):
+        from personal_superagent.workflow_v06.checkpoints import (
+            run_workflow,
+            execution_config,
+        )
+        from personal_superagent.client.files import describe_root
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as root:
+            root = Path(root)
+            notes = root / "notes"
+            notes.mkdir()
+            (notes / "input.md").write_text("V06_LOCAL_FILE_SENTINEL")
+            scope = {
+                "grant_id": str(uuid.uuid4()),
+                "device_id": str(uuid.uuid4()),
+                "label": "测试笔记",
+                "tools": ["list_files", "read_text", "write_text"],
+                "source_path": "input.md",
+            }
+            grant = {
+                **describe_root(str(notes)),
+                "id": scope["grant_id"],
+                "tools": scope["tools"],
+            }
+            authorizations = root / "grants.json"
+            authorizations.write_text(json.dumps([grant]))
+            payload = {
+                "attempt_id": str(uuid.uuid4()),
+                "mode": "demo",
+                "action": "start",
+                "checkpoint_dir": str(root / "run"),
+                "local_root": grant,
+                "local_authorizations": str(authorizations),
+                "snapshot": {
+                    "title": "读取并整理",
+                    "description": "整理指定材料",
+                    "workflow": execution_config("demo"),
+                    "device": scope,
+                    "dispatch": {
+                        "role": "writer",
+                        "tools": [
+                            "local_read_text",
+                            "local_list_files",
+                            "local_write_text",
+                        ],
+                    },
+                    "policy": POLICY,
+                },
+            }
+            result = run_workflow(payload, lambda *a: None)
+            self.assertTrue(result["pending"])
+            self.assertFalse((notes / "superagent-result.md").exists())
+            self.assertEqual(result["pending"][0]["action"]["name"], "local_write_text")
+            for _ in range(3):
+                decisions = {}
+                for p in result["pending"]:
+                    decisions.setdefault(p["interrupt_id"], {"decisions": []})[
+                        "decisions"
+                    ].append({"type": "approve"})
+                payload.update(action="resume", decisions=decisions)
+                result = run_workflow(payload, lambda *a: None)
+                if result["complete"]:
+                    break
+            self.assertTrue(result["complete"])
+            self.assertIn(
+                "V06_LOCAL_FILE_SENTINEL", (notes / "superagent-result.md").read_text()
+            )
