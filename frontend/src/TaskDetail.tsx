@@ -47,6 +47,10 @@ export function TaskDetail({
       setBusy(false);
     }
   }
+  let displayedResult = attempt?.result || "";
+  if(task.dispatch?.role === "researcher" && displayedResult) {
+    try { const report=JSON.parse(displayedResult); if(typeof report.brief==="string") displayedResult=report.brief+"\n\n### 实际搜索来源\n"+(report.sources || []).map((s:any)=>`- [${s.title}](${s.url})`).join("\n"); } catch { /* 历史非 JSON 结果按原文保留 */ }
+  }
   const external = ["happier","blender"].includes(attempt?.executor || task.agent?.executor_kind || "");
   const canStart = task.state === "pending",
     canRetry =
@@ -318,7 +322,7 @@ export function TaskDetail({
               <div className="error-banner">{attempt.error}</div>
             )}
             {attempt?.result && (
-              <Conversation text="" result={attempt.result} />
+              <Conversation text="" result={displayedResult} />
             )}
           </>
         )}
@@ -329,7 +333,7 @@ export function TaskDetail({
               <details className="process-card" key={s.call_id}>
                 <summary>
                   <Workflow size={16} />
-                  {s.role === "writer" ? "内容整理" : "质量检查"}
+                  {({writer:"内容整理",reviewer:"质量检查",researcher:"调研子 Agent",modeler:"建模 Agent"} as Record<string,string>)[s.role] || s.role}
                   <span className="right muted">
                     {(
                       {

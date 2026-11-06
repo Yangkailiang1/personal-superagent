@@ -32,7 +32,7 @@ class Shape(BaseModel):
     material: str
     points: list[Vector] = Field(default_factory=list, max_length=5000)
     faces: list[list[int]] = Field(default_factory=list, max_length=5000)
-    radius: float = Field(default=0.06, ge=0.005, le=5)
+    radius: float = Field(default=1.0, ge=0.005, le=5)
     subdivision: int = Field(default=0, ge=0, le=2)
 
     @model_validator(mode="after")

@@ -40,11 +40,17 @@ def apply_scene(payload, directory):
     for item in spec["objects"]:
         kind = item["type"]
         if kind == "sphere":
-            bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=20)
+            bpy.ops.mesh.primitive_uv_sphere_add(
+                segments=48, ring_count=32, radius=item["radius"]
+            )
         elif kind == "cylinder":
-            bpy.ops.mesh.primitive_cylinder_add(vertices=32, radius=1, depth=2)
+            bpy.ops.mesh.primitive_cylinder_add(
+                vertices=32, radius=item["radius"], depth=2
+            )
         elif kind == "cone":
-            bpy.ops.mesh.primitive_cone_add(vertices=32, radius1=1, radius2=0, depth=2)
+            bpy.ops.mesh.primitive_cone_add(
+                vertices=32, radius1=item["radius"], radius2=0, depth=2
+            )
         elif kind == "torus":
             bpy.ops.mesh.primitive_torus_add(
                 major_radius=1, minor_radius=item["radius"]
@@ -138,6 +144,7 @@ def inspect_scene():
             {
                 "objects": len(meshes),
                 "names": [o.name for o in meshes],
+                "dimensions": {o.name: list(o.dimensions) for o in meshes},
                 "materials": len(bpy.data.materials),
                 "camera": bool(bpy.context.scene.camera),
             }

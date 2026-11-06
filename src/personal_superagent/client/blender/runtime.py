@@ -49,7 +49,10 @@ def register(root, output):
 
 
 def manifest(root):
-    return {k: v for k, v in config(root).items() if k != "output"}
+    cfg = config(root)
+    if hashlib.sha256(ADDON.read_bytes()).hexdigest() != cfg["addon_hash"]:
+        raise ValueError("Blender 插件已变化，请重新检查并授权")
+    return {k: v for k, v in cfg.items() if k != "output"}
 
 
 def call(config, job, action, **data):
