@@ -1391,6 +1391,14 @@ h3 {
     gap: 16px;
   }
 }
+.main:has(.main-chat-page) {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.main:has(.main-chat-page) > .topbar {
+  flex-shrink: 0;
+}
 .main-chat-page {
   display: flex;
   flex-direction: column;
@@ -1398,23 +1406,39 @@ h3 {
   min-height: 0;
   max-width: 1100px;
   width: 100%;
-  margin: auto;
-  padding: 20px 36px;
+  margin: 0 auto;
+  padding: 16px 32px 8px;
+  overflow: hidden;
 }
 .chat-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 20px;
+  flex: none;
+  min-width: 0;
+  padding-bottom: 12px;
 }
 .chat-heading h1 {
   font-size: 16px;
   font-weight: 500;
+  flex: none;
+  white-space: nowrap;
+  letter-spacing: 0;
+}
+.chat-heading select {
+  flex: 0 1 480px;
+  min-width: 0;
+  width: 70%;
+  text-overflow: ellipsis;
 }
 .main-chat-scroll {
   flex: 1;
+  min-height: 0;
   overflow: auto;
   padding: 25px 0;
+  overflow-wrap: anywhere;
+  scrollbar-gutter: stable;
 }
 .chat-welcome {
   text-align: center;
@@ -1433,6 +1457,7 @@ h3 {
   background: #fff;
   margin-top: 15px;
   margin-bottom: 15px;
+  flex-shrink: 0;
   box-shadow: 0 5px 25px #00000004;
 }
 .main-composer textarea {
@@ -1476,11 +1501,25 @@ h3 {
   margin: 0 0 25px;
 }
 .chat-round > .intake-user {
-  margin-left: 20%;
-  max-width: 80%;
+  margin: 0 0 20px auto;
+  width: fit-content;
+  max-width: 85%;
+  padding: 12px 18px;
+  border-radius: 16px;
+  white-space: pre-wrap;
 }
 .chat-round > small {
   color: #999;
+  display: block;
+  margin-bottom: 8px;
+}
+.conversation-next {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 13px;
 }
 .question-card,
 .plan-card,
