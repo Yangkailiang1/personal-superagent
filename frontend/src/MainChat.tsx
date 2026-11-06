@@ -298,6 +298,7 @@ export function MainChat({
                 />
               </label>
             </div>
+            {c.draft.steps.some((s:any)=>s.role==="coder") && <p className="data-notice">代码任务将调用本机真实 Claude，可能产生模型费用。主对话的“离线演示”不适用于代码执行；点击发布即授权本计划的真实执行。</p>}
             <button
               className="primary"
               disabled={
